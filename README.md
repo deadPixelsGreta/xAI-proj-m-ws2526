@@ -1,11 +1,9 @@
-# xAI-proj-m-ws2526
-xAI-Proj-M: Robust Machine Learning
+# xAI-Proj-M: Robust Machine Learning
 
 - Student: Sebastian Drefahl
 - StudentID:
 - PhoneID:
   - iphone11
-
 
 # Task images
 We have to take 30 pictures per person per class.
