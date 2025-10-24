@@ -2,12 +2,12 @@
 
 - Student: Sebastian Drefahl
 - StudentID:
-- PhoneID:
+- PhoneID: x11
   - iPhone 11
 
 - Student: Stephanus Park
 - StudentID:
-- PhoneID:
+- PhoneID: x14
   - iPhone 14
 
 # Task images
