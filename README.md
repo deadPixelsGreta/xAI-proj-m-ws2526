@@ -3,7 +3,12 @@
 - Student: Sebastian Drefahl
 - StudentID:
 - PhoneID:
-  - iphone11
+  - iPhone 11
+
+- Student: Stephanus Park
+- StudentID:
+- PhoneID:
+  - iPhone 14
 
 # Task images
 We have to take 30 pictures per person per class.
@@ -15,6 +20,6 @@ studentID_phoneID_classname_imageID.jpg
 
 
 *Deadline:* 
-* deadline 1: 23.11.2025
-* deadline 2: 14.12.2025
+* Deadline 1: 23.11.2025
+* Deadline 2: 14.12.2025
 
