@@ -10,6 +10,11 @@
 - PhoneID: x14
   - iPhone 14
 
+- Student: Mehdi Huseynov
+- StudentID:
+- PhoneID: ...
+  - ... 
+
 # Task images
 We have to take 30 pictures per person per class.
 We have 10 classes:
