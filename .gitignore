@@ -1,16 +1,6 @@
 # ignor dataset
 **/dataset/
 
-# all images ignore
-images/*.jpg
-images/*.JPG
-images/*.png
-images/*.PNG
-images/*.jpeg
-images/*.JPEG
-images/*.bmp
-images/*.BMP
-
 # macOS
 .DS_Store
 
