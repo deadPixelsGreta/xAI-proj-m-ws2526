@@ -13,7 +13,7 @@
   - iPhone 14
 
 - Student: Mehdi Huseynov
-- GITHUB-images: 
+- GITHUB-images: https://github.com/MehdiHuseynovLive/xAI-proj-m-ws2526_Pictures 
 - StudentID: NLUB
 - PhoneID: x14Pro
   - iphone 14Pro
