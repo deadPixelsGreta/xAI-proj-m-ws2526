@@ -1,16 +1,19 @@
 # xAI-Proj-M: Robust Machine Learning
 
 - Student: Sebastian Drefahl
+- GITHUB-images: https://github.com/deadPixelsGreta/xAI-proj-m-ws2526_img
 - StudentID: IOKJ
 - PhoneID: x11
   - iPhone 11
 
 - Student: Stephanus Park
+- GITHUB-images: https://github.com/stu-rdy/xai-proj-m-ws2526
 - StudentID: GBQL
 - PhoneID: x14
   - iPhone 14
 
 - Student: Mehdi Huseynov
+- GITHUB-images: 
 - StudentID: NLUB
 - PhoneID: x14Pro
   - iphone 14Pro
