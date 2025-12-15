@@ -2,18 +2,18 @@
 
 training:
   epochs: 5
-  batch_size: 32
+  batch_size: 16
   learning_rate: 0.001
   momentum: 0.9
   weight_decay: 0.0001
-  num_workers: 4
+  num_workers: 0
 
 model:
   architecture: resnet18
   pretrained: true
 
 data:
-  data_dir: datasets/ImageNetSubset
+  data_dir: datasets
 
 paths:
   checkpoint_dir: experiments/checkpoints

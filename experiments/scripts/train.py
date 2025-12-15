@@ -3,6 +3,7 @@
 
 import argparse
 import sys
+from datetime import datetime
 from pathlib import Path
 
 try:
@@ -162,6 +163,11 @@ def main():
             args.wandb_group = wb.get("group")
         if "job_type" in wb:
             args.wandb_job_type = wb.get("job_type")
+
+    # Auto-generate wandb run_name from model and timestamp if not provided
+    if args.wandb_run_name is None:
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        args.wandb_run_name = f"{args.model}-{timestamp}"
 
     print("=" * 60)
     print(f"{args.model.upper()} Training on ImageNetSubset")
