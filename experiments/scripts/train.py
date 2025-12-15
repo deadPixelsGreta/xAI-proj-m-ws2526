@@ -11,7 +11,7 @@ try:
 except ImportError:  # pragma: no cover
     yaml = None
 
-from experiments.src.utils import get_device
+from experiments.src.utils import get_device, set_seed
 from experiments.src.utils.device import get_device_name
 from experiments.src.models import SUPPORTED_MODELS, create_model
 from experiments.src.data import create_data_loaders, get_dataset_info
@@ -67,6 +67,9 @@ def parse_args():
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="SGD momentum")
     parser.add_argument("--weight-decay", type=float, default=1e-4, help="Weight decay")
+    parser.add_argument(
+        "--seed", type=int, default=None, help="Random seed for reproducibility"
+    )
 
     # Output arguments
     parser.add_argument(
@@ -173,9 +176,14 @@ def main():
     print(f"{args.model.upper()} Training on ImageNetSubset")
     print("=" * 60)
 
+    # Set seed for reproducibility
+    if args.seed is not None:
+        set_seed(args.seed)
+        print(f"\nRandom seed: {args.seed}")
+
     # Setup device
     device = get_device()
-    print(f"\nDevice: {get_device_name(device)}")
+    print(f"Device: {get_device_name(device)}")
 
     # Load dataset info
     dataset_info = get_dataset_info(args.data_dir)
@@ -232,6 +240,11 @@ def main():
     }
 
     # Train
+    # Include seed in model name for checkpoint differentiation
+    model_save_name = args.model
+    if args.seed is not None:
+        model_save_name = f"{args.model}_seed{args.seed}"
+
     results = train(
         model=model,
         train_loader=train_loader,
@@ -239,7 +252,7 @@ def main():
         config=config,
         device=device,
         save_dir=args.save_dir,
-        model_name=args.model,
+        model_name=model_save_name,
         wandb_enabled=args.wandb,
         wandb_config=wandb_config,
     )

@@ -1,3 +1,5 @@
-from .device import get_device
+"""Utility functions for device, seeding, etc."""
 
-__all__ = ["get_device"]
+from .device import get_device, get_device_name, set_seed
+
+__all__ = ["get_device", "get_device_name", "set_seed"]

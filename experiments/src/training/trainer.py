@@ -107,7 +107,7 @@ def train(
     Returns a summary dict with best/final metrics and checkpoint paths.
     """
     # Setup
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer = optim.SGD(
         model.parameters(),
         lr=config.get("lr", 0.001),

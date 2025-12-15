@@ -20,7 +20,7 @@ paths:
 
 wandb:
   enabled: true
-  project: imagenet-subset
+  project: imagenet-subset-randSeed
   run_name: null        # optional
   entity: null          # optional
   tags: []              # optional list of strings

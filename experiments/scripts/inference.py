@@ -5,6 +5,15 @@ import argparse
 import sys
 from pathlib import Path
 
+import torch
+
+try:
+    import wandb
+
+    WANDB_AVAILABLE = True
+except ImportError:
+    WANDB_AVAILABLE = False
+
 from experiments.src.utils import get_device
 from experiments.src.utils.device import get_device_name
 from experiments.src.models import load_checkpoint
@@ -12,7 +21,7 @@ from experiments.src.data import CLASS_NAMES, get_val_transform
 from experiments.src.inference import run_inference
 from experiments.src.inference.ensemble import (
     find_default_checkpoints,
-    ensemble_predict,
+    ensemble_predict_extended,
     load_image,
 )
 
@@ -65,12 +74,32 @@ def parse_args():
         action="store_true",
         help="Show individual model predictions",
     )
+    parser.add_argument(
+        "--no-diagnostics",
+        action="store_true",
+        help="Hide ensemble diagnostic metrics (disagreement, agreement ratio)",
+    )
+
+    # Wandb arguments
+    parser.add_argument(
+        "--wandb",
+        action="store_true",
+        help="Enable Weights & Biases logging for evaluation",
+    )
+    parser.add_argument(
+        "--wandb-project",
+        type=str,
+        default="imagenet-subset-ensemble",
+        help="W&B project name for ensemble evaluation",
+    )
 
     return parser.parse_args()
 
 
-def evaluate_ensemble(models, model_names, data_dir, device):
-    """Evaluate ensemble on entire validation set."""
+def evaluate_ensemble(
+    models, model_names, data_dir, device, wandb_enabled=False, wandb_project=None
+):
+    """Evaluate ensemble on entire validation set with optional W&B logging."""
     val_dir = Path(data_dir) / "val"
     transform = get_val_transform()
 
@@ -78,10 +107,27 @@ def evaluate_ensemble(models, model_names, data_dir, device):
     print("Ensemble Evaluation on Validation Set")
     print("=" * 60)
 
+    # Initialize W&B if enabled
+    if wandb_enabled and WANDB_AVAILABLE:
+        wandb.init(
+            project=wandb_project or "imagenet-subset-ensemble",
+            name=f"ensemble-eval-{len(models)}models",
+            config={
+                "num_models": len(models),
+                "model_names": model_names,
+                "data_dir": str(data_dir),
+            },
+        )
+        print(f"   W&B logging enabled: {wandb.run.url}")
+
     total_correct = 0
     total_images = 0
     per_class_correct = {name: 0 for name in CLASS_NAMES}
     per_class_total = {name: 0 for name in CLASS_NAMES}
+
+    # Track disagreement metrics
+    all_disagreements = []
+    all_agreement_ratios = []
 
     for class_name in CLASS_NAMES:
         class_dir = val_dir / class_name
@@ -95,15 +141,17 @@ def evaluate_ensemble(models, model_names, data_dir, device):
 
         class_correct = 0
         for image_file in image_files:
-            # Load and predict
+            # Load and predict with extended metrics
             image_tensor = load_image(str(image_file), transform)
-            ensemble_probs, _ = ensemble_predict(models, image_tensor, device)
+            result = ensemble_predict_extended(
+                models, model_names, image_tensor, device
+            )
 
-            # Get prediction
-            _, predicted_idx = ensemble_probs[0].max(0)
-            predicted_class = CLASS_NAMES[predicted_idx.item()]
+            # Track metrics
+            all_disagreements.append(result.disagreement)
+            all_agreement_ratios.append(result.agreement_ratio)
 
-            if predicted_class == class_name:
+            if result.predicted_class == class_name:
                 class_correct += 1
                 total_correct += 1
 
@@ -115,32 +163,102 @@ def evaluate_ensemble(models, model_names, data_dir, device):
     # Print per-class results
     print("\n Per-Class Accuracy:")
     print("-" * 50)
+    per_class_accuracies = {}
     for class_name in CLASS_NAMES:
         total = per_class_total[class_name]
         correct = per_class_correct[class_name]
         if total > 0:
             acc = 100 * correct / total
-            bar = "█" * int(acc / 5) + "░" * (20 - int(acc / 5))
+            per_class_accuracies[class_name] = acc
+            bar = "[" + "#" * int(acc / 5) + "-" * (20 - int(acc / 5)) + "]"
             print(f"   {class_name:20s} {bar} {acc:5.1f}% ({correct}/{total})")
 
     # Print overall results
     overall_acc = 100 * total_correct / total_images if total_images > 0 else 0
-    print("\n" + "-" * 50)
-    print(f"Overall Ensemble Accuracy: {overall_acc:.2f}% ({total_correct}/{total_images})")
+    avg_disagreement = (
+        sum(all_disagreements) / len(all_disagreements) if all_disagreements else 0
+    )
+    avg_agreement = (
+        sum(all_agreement_ratios) / len(all_agreement_ratios)
+        if all_agreement_ratios
+        else 0
+    )
 
-    # Compare with individual models
-    print(f"\n Model Comparison:")
+    print("\n" + "-" * 50)
+    print(
+        f"Overall Ensemble Accuracy: {overall_acc:.2f}% ({total_correct}/{total_images})"
+    )
+    print(f"Average Disagreement:      {avg_disagreement:.4f}")
+    print(f"Average Agreement Ratio:   {avg_agreement * 100:.1f}%")
+
+    # Get individual model accuracies for comparison
+    individual_accs = {}
+    print("\n Model Comparison:")
     print("-" * 50)
     for name in model_names:
         # Get individual model accuracy from checkpoint
         checkpoint_path = Path("checkpoints") / f"best_{name}.pth"
         if checkpoint_path.exists():
-            import torch
-
             ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
             individual_acc = ckpt.get("val_acc", 0)
-            print(f"   {name:20s} {individual_acc:.2f}%")
-    print(f"   {'ENSEMBLE':20s} {overall_acc:.2f}% ⭐")
+            individual_accs[name] = individual_acc
+            print(f"   {name:25s} {individual_acc:.2f}%")
+    print(f"   {'ENSEMBLE':25s} {overall_acc:.2f}% *")
+
+    # Log to W&B
+    if wandb_enabled and WANDB_AVAILABLE:
+        # Log summary metrics
+        wandb.log(
+            {
+                "ensemble/accuracy": overall_acc,
+                "ensemble/avg_disagreement": avg_disagreement,
+                "ensemble/avg_agreement_ratio": avg_agreement * 100,
+                "ensemble/total_images": total_images,
+                "ensemble/num_models": len(models),
+            }
+        )
+
+        # Log per-class accuracy table
+        class_table = wandb.Table(
+            columns=["class", "accuracy", "correct", "total"],
+            data=[
+                [
+                    cls,
+                    per_class_accuracies.get(cls, 0),
+                    per_class_correct[cls],
+                    per_class_total[cls],
+                ]
+                for cls in CLASS_NAMES
+            ],
+        )
+        wandb.log({"ensemble/per_class_accuracy": class_table})
+
+        # Log model comparison
+        model_table = wandb.Table(
+            columns=["model", "accuracy", "is_ensemble"],
+            data=[[name, acc, False] for name, acc in individual_accs.items()]
+            + [["ENSEMBLE", overall_acc, True]],
+        )
+        wandb.log({"ensemble/model_comparison": model_table})
+
+        # Log disagreement histogram
+        wandb.log(
+            {
+                "ensemble/disagreement_histogram": wandb.Histogram(all_disagreements),
+                "ensemble/agreement_histogram": wandb.Histogram(all_agreement_ratios),
+            }
+        )
+
+        # Summary
+        wandb.run.summary["ensemble_accuracy"] = overall_acc
+        wandb.run.summary["avg_disagreement"] = avg_disagreement
+        wandb.run.summary["avg_agreement_ratio"] = avg_agreement
+        wandb.run.summary["improvement_over_best_single"] = (
+            overall_acc - max(individual_accs.values()) if individual_accs else 0
+        )
+
+        wandb.finish()
+        print("\n   W&B logging complete!")
 
     return overall_acc
 
@@ -186,7 +304,14 @@ def main():
 
     # Run evaluation mode
     if args.evaluate:
-        evaluate_ensemble(models, model_names, args.data_dir, device)
+        evaluate_ensemble(
+            models,
+            model_names,
+            args.data_dir,
+            device,
+            wandb_enabled=args.wandb,
+            wandb_project=args.wandb_project,
+        )
 
     # Single image inference
     elif args.image:
@@ -197,6 +322,7 @@ def main():
             device=device,
             top_k=args.top_k,
             show_individual=args.show_individual,
+            show_diagnostics=not args.no_diagnostics,
         )
 
     # Directory inference
@@ -220,23 +346,26 @@ def main():
         ground_truth = image_dir.name if image_dir.name in CLASS_NAMES else None
 
         for image_file in sorted(image_files)[:20]:  # Limit to 20 for display
-            predictions = run_inference(
+            result = run_inference(
                 models=models,
                 model_names=model_names,
                 image_path=str(image_file),
                 device=device,
                 top_k=args.top_k,
                 show_individual=args.show_individual,
+                show_diagnostics=not args.no_diagnostics,
             )
 
             if ground_truth:
-                top_prediction = predictions[0][0]
+                top_prediction = result["predicted_class"]
                 if top_prediction == ground_truth:
                     correct += 1
                 total += 1
 
         if ground_truth and total > 0:
-            print(f"\n Ensemble Accuracy on {ground_truth}: {100 * correct / total:.1f}% ({correct}/{total})")
+            print(
+                f"\n Ensemble Accuracy on {ground_truth}: {100 * correct / total:.1f}% ({correct}/{total})"
+            )
 
     print("\n" + "=" * 60)
     print("Inference Complete!")
