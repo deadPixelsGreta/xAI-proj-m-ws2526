@@ -65,18 +65,24 @@ def load_checkpoint(
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
 
     # Get model name from checkpoint or infer from filename
-    if "model_name" in checkpoint:
-        model_name = checkpoint["model_name"]
-    else:
-        # Try to infer from filename
-        filename = Path(checkpoint_path).stem.lower()
-        model_name = None
-        for name in SUPPORTED_MODELS:
-            if name in filename:
-                model_name = name
-                break
-        if model_name is None:
-            model_name = "resnet18"  # Default fallback
+    # Get model name from checkpoint or infer from filename
+    raw_name = checkpoint.get("model_name", Path(checkpoint_path).stem).lower()
+
+    model_name = None
+    for supported in SUPPORTED_MODELS:
+        if supported in raw_name:
+            model_name = supported
+            break
+
+    if model_name is None:
+        # If we can't match, default to resnet18 but warn?
+        # For now, just raise the error from create_model if passed raw,
+        # or fallback. The traceback showed it passed 'efficientnet_b0_seed0'
+        # which means it didn't match cleanly if we just used equality.
+        # But here we are using substring matching 'if supported in raw_name'.
+        # 'efficientnet_b0' IS in 'efficientnet_b0_seed0', so this loop fixes it.
+        # If no match found, maybe it's completely unknown.
+        model_name = raw_name  # Let create_model raise the specific error if needed
 
     # Get number of classes from checkpoint
     num_classes = checkpoint.get("num_classes", num_classes)

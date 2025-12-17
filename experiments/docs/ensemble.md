@@ -37,21 +37,33 @@ graph LR
 
 ## Dataset
 
-The ImageNetSubset contains 10 classes from the original ImageNet dataset:
+The ImageNetSubset contains 10 classes from the original ImageNet dataset. We recommend an **80/10/10 split** (Train/Val/Test) for robust evaluation.
 
-| Class | Training Images | Validation Images |
-|-------|----------------|-------------------|
-| binder | 1,300 | 50 |
-| coffee_mug | 1,300 | 50 |
-| computer_keyboard | 1,300 | 50 |
-| mouse | 1,300 | 50 |
-| notebook | 1,300 | 50 |
-| remote_control | 1,300 | 50 |
-| soup_bowl | 1,300 | 50 |
-| teapot | 1,300 | 50 |
-| toilet_tissue | 1,300 | 50 |
-| wooden_spoon | 1,300 | 50 |
-| **Total** | **13,000** | **500** |
+| Class | Total Images | Train (80%) | Val (10%) | Test (10%) |
+|-------|--------------|-------------|-----------|------------|
+| binder | 1,300 | 1,040 | 130 | 130 |
+| coffee_mug | 1,300 | 1,040 | 130 | 130 |
+| computer_keyboard | 1,300 | 1,040 | 130 | 130 |
+| mouse | 1,300 | 1,040 | 130 | 130 |
+| notebook | 1,300 | 1,040 | 130 | 130 |
+| remote_control | 1,300 | 1,040 | 130 | 130 |
+| soup_bowl | 1,300 | 1,040 | 130 | 130 |
+| teapot | 1,300 | 1,040 | 130 | 130 |
+| toilet_tissue | 1,300 | 1,040 | 130 | 130 |
+| wooden_spoon | 1,300 | 1,040 | 130 | 130 |
+| **Total** | **13,000** | **10,400** | **1,300** | **1,300** |
+
+### Datset Splitting
+
+Use the provided utility to split your dataset. This tool is safe (non-destructive by default) and reproducible.
+
+```bash
+# 1. Preview the split (Dry Run)
+python experiments/scripts/split_dataset.py --data-dir ImageNetSubset --dry-run
+
+# 2. Apply the split
+python experiments/scripts/split_dataset.py --data-dir ImageNetSubset
+```
 
 ## Training
 
@@ -68,17 +80,17 @@ pip install -r requirements.txt
 
 ### Train Each Model
 
-Each model is trained independently with transfer learning (pretrained ImageNet weights):
+Each model is trained independently with transfer learning.
 
 ```bash
-# Train ResNet18 (~17 min on M1 Air)
-python train_resnet.py --model resnet18 --epochs 5 --wandb
+# Train ResNet18
+python experiments/scripts/train.py --model resnet18 --epochs 5 --wandb
 
-# Train ResNet34 (~20 min on M1 Air)
-python train_resnet.py --model resnet34 --epochs 5 --wandb
+# Train ResNet34
+python experiments/scripts/train.py --model resnet34 --epochs 5 --wandb
 
-# Train EfficientNet-B0 (~15 min on M1 Air)
-python train_resnet.py --model efficientnet_b0 --epochs 5 --wandb
+# Train EfficientNet-B0
+python experiments/scripts/train.py --model efficientnet_b0 --epochs 5 --wandb
 ```
 
 ### Training Configuration
@@ -91,18 +103,7 @@ python train_resnet.py --model efficientnet_b0 --epochs 5 --wandb
 | Optimizer | SGD + Momentum (0.9) | Proven for image classification |
 | LR Schedule | StepLR (step=7, γ=0.1) | Gradual decay |
 
-### Checkpoints
-
-After training, checkpoints are saved to `checkpoints/`:
-- `best_resnet18.pth`
-- `best_resnet34.pth`
-- `best_efficientnet_b0.pth`
-
-Each checkpoint contains:
-- Model weights (`model_state_dict`)
-- Architecture name (`model_name`)
-- Number of classes (`num_classes`)
-- Validation accuracy (`val_acc`)
+Checkpoints are saved to `checkpoints/` (e.g., `best_resnet18_seed42.pth`).
 
 ## Ensemble Inference
 
@@ -114,31 +115,20 @@ Each checkpoint contains:
 4. **Average**: Probabilities are averaged element-wise
 5. **Argmax**: Final prediction is the class with highest averaged probability
 
-```python
-# Pseudocode
-probs = []
-for model in [resnet18, resnet34, efficientnet_b0]:
-    output = model(image)
-    probs.append(softmax(output))
-
-ensemble_prob = mean(probs, axis=0)
-prediction = argmax(ensemble_prob)
-```
-
 ### Usage
 
 ```bash
+# Evaluate on the TEST set (Recommended)
+python experiments/scripts/inference.py --evaluate --split test
+
+# Evaluate on Validation set
+python experiments/scripts/inference.py --evaluate --split val
+
 # Single image inference
-python ensemble_inference.py --image path/to/image.jpg
+python experiments/scripts/inference.py --image path/to/image.jpg
 
 # Batch inference on directory
-python ensemble_inference.py --image-dir ImageNetSubset/val/coffee_mug
-
-# Show individual model predictions
-python ensemble_inference.py --image test.jpg --show-individual
-
-# Custom checkpoints
-python ensemble_inference.py --checkpoints model1.pth model2.pth --image test.jpg
+python experiments/scripts/inference.py --image-dir custom_images/
 ```
 
 ### Output Example
@@ -149,88 +139,51 @@ python ensemble_inference.py --checkpoints model1.pth model2.pth --image test.jp
 🎯 Ensemble Prediction (top 5):
    1. coffee_mug           ████████████████░░░░  82.3%
    2. teapot               ██░░░░░░░░░░░░░░░░░░   8.5%
-   3. soup_bowl            █░░░░░░░░░░░░░░░░░░░   5.2%
-   4. wooden_spoon         ░░░░░░░░░░░░░░░░░░░░   2.1%
-   5. remote_control       ░░░░░░░░░░░░░░░░░░░░   1.2%
-
-📊 Individual Model Predictions:
-   resnet18             → coffee_mug           (79.5%)
-   resnet34             → coffee_mug           (85.1%)
-   efficientnet_b0      → coffee_mug           (82.4%)
+...
 ```
 
 ## Expected Performance
 
-| Configuration | Validation Accuracy |
+| Configuration | Test Accuracy (Est.) |
 |--------------|---------------------|
 | ResNet18 alone | ~87-90% |
 | ResNet34 alone | ~88-91% |
 | EfficientNet-B0 alone | ~86-89% |
 | **Ensemble (3 models)** | **~91-94%** |
 
-> [!TIP]
-> Ensemble typically improves accuracy by 2-5% over the best individual model by reducing variance and capturing complementary features.
-
 ## File Structure
 
 ```
 project/
 ├── src/                         # Python package
-│   ├── __init__.py
-│   ├── models/                  # Model architectures
-│   │   ├── __init__.py
-│   │   └── architectures.py
-│   ├── data/                    # Data loading
-│   │   ├── __init__.py
-│   │   └── dataset.py
-│   ├── training/                # Training logic
-│   │   ├── __init__.py
-│   │   └── trainer.py
-│   ├── inference/               # Inference logic
-│   │   ├── __init__.py
-│   │   └── ensemble.py
-│   └── utils/                   # Utilities
-│       ├── __init__.py
-│       └── device.py
-├── scripts/                     # CLI entry points
-│   ├── train.py
-│   └── inference.py
-├── configs/
-│   └── default.yaml
-├── checkpoints/
-│   ├── best_resnet18.pth
-│   ├── best_resnet34.pth
-│   └── best_efficientnet_b0.pth
+│   ├── experiments/
+│       ├── src/
+│       │   ├── models/          # Model architectures
+│       │   ├── data/            # Data loading
+│       │   ├── training/        # Training logic
+│       │   └── inference/       # Inference logic
+├── experiments/
+│   ├── scripts/                 # CLI entry points
+│   │   ├── train.py
+│   │   ├── inference.py
+│   │   └── split_dataset.py     # <--- NEW: Dataset splitter
+│   ├── configs/
+│   │   └── default.yaml
+│   ├── docs/
+│   │   └── ensemble.md
+│   └── checkpoints/
 ├── ImageNetSubset/
 │   ├── train/
-│   └── val/
-├── docs/
-│   └── ensemble.md
-├── tests/
+│   ├── val/
+│   └── test/                    # <--- NEW: Test set
 ├── requirements.txt
 └── venv/
 ```
 
 ## Weights & Biases Integration
 
-Training runs are logged to [Weights & Biases](https://wandb.ai) for experiment tracking:
+Training runs are logged to [Weights & Biases](https://wandb.ai).
 
 ```bash
-# First time setup
-wandb login
-
-# Train with logging
-python train_resnet.py --model resnet18 --wandb --wandb-project my-project
+python experiments/scripts/train.py --model resnet18 --wandb --wandb-project imagenet-subset-ensemble
 ```
-
-Logged metrics:
-- Training/validation loss and accuracy per epoch
-- Learning rate schedule
-- Model hyperparameters
-- Best model summary
-
-## References
-
-- [Deep Residual Learning (ResNet)](https://arxiv.org/abs/1512.03385)
-- [EfficientNet: Rethinking Model Scaling](https://arxiv.org/abs/1905.11946)
-- [Ensemble Methods in Machine Learning](https://link.springer.com/chapter/10.1007/3-540-45014-9_1)
