@@ -93,29 +93,44 @@ def parse_args():
         help="W&B project name for ensemble evaluation",
     )
 
+    parser.add_argument(
+        "--split",
+        type=str,
+        default="val",
+        choices=["val", "test"],
+        help="Dataset split to evaluate on (val or test)",
+    )
+
     return parser.parse_args()
 
 
 def evaluate_ensemble(
-    models, model_names, data_dir, device, wandb_enabled=False, wandb_project=None
+    models,
+    model_names,
+    data_dir,
+    device,
+    split="val",
+    wandb_enabled=False,
+    wandb_project=None,
 ):
-    """Evaluate ensemble on entire validation set with optional W&B logging."""
-    val_dir = Path(data_dir) / "val"
-    transform = get_val_transform()
+    """Evaluate ensemble on entire validation or test set with optional W&B logging."""
+    eval_dir = Path(data_dir) / split
+    transform = get_val_transform()  # Same transform for val and test
 
     print("\n" + "=" * 60)
-    print("Ensemble Evaluation on Validation Set")
+    print(f"Ensemble Evaluation on {split.capitalize()} Set")
     print("=" * 60)
 
     # Initialize W&B if enabled
     if wandb_enabled and WANDB_AVAILABLE:
         wandb.init(
             project=wandb_project or "imagenet-subset-ensemble",
-            name=f"ensemble-eval-{len(models)}models",
+            name=f"ensemble-eval-{split}-{len(models)}models",
             config={
                 "num_models": len(models),
                 "model_names": model_names,
                 "data_dir": str(data_dir),
+                "split": split,
             },
         )
         print(f"   W&B logging enabled: {wandb.run.url}")
@@ -130,7 +145,7 @@ def evaluate_ensemble(
     all_agreement_ratios = []
 
     for class_name in CLASS_NAMES:
-        class_dir = val_dir / class_name
+        class_dir = eval_dir / class_name
         if not class_dir.exists():
             continue
 
@@ -309,6 +324,7 @@ def main():
             model_names,
             args.data_dir,
             device,
+            split=args.split,
             wandb_enabled=args.wandb,
             wandb_project=args.wandb_project,
         )

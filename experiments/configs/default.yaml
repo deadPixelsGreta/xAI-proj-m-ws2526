@@ -13,7 +13,11 @@ model:
   pretrained: true
 
 data:
-  data_dir: datasets
+  data_dir: datasets 
+  split_ratios:
+    train: 0.8
+    val: 0.1
+    test: 0.1
 
 paths:
   checkpoint_dir: experiments/checkpoints

@@ -4,6 +4,8 @@ from .dataset import (
     get_val_transform,
     create_data_loaders,
     get_dataset_info,
+    get_test_transform,
+    create_test_loader,
 )
 
 __all__ = [
@@ -12,4 +14,6 @@ __all__ = [
     "get_val_transform",
     "create_data_loaders",
     "get_dataset_info",
+    "get_test_transform",
+    "create_test_loader",
 ]

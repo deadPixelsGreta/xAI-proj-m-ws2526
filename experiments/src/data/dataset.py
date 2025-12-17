@@ -100,3 +100,33 @@ def get_dataset_info(data_dir: str) -> dict:
         "classes": train_dataset.classes,
         "num_classes": len(train_dataset.classes),
     }
+
+
+def get_test_transform() -> transforms.Compose:
+    """Return test transforms (identical to validation)."""
+    return get_val_transform()
+
+
+def create_test_loader(
+    data_dir: str, batch_size: int = 32, num_workers: int = 4
+) -> DataLoader:
+    """Create data loader from an ImageFolder layout under data_dir/test.
+
+    Returns test_loader.
+    """
+    test_dir = os.path.join(data_dir, "test")
+
+    if not os.path.exists(test_dir):
+        raise FileNotFoundError(f"Test directory not found: {test_dir}")
+
+    test_dataset = datasets.ImageFolder(test_dir, transform=get_test_transform())
+
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        pin_memory=True,
+    )
+
+    return test_loader
