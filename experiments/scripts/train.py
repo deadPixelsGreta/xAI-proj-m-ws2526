@@ -6,6 +6,31 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# Add project root to Python path to ensure 'experiments' module can be found
+def setup_path():
+    """Find and add project root to sys.path."""
+    markers = {".git", "requirements.txt", "setup.py", "pyproject.toml"}
+    current = Path(__file__).resolve().parent  # experiments/scripts/
+    
+    # Walk up from current directory to find project root
+    for parent in [current, *current.parents]:
+        if any((parent / marker).exists() for marker in markers):
+            project_root = parent
+            if str(project_root) not in sys.path:
+                sys.path.insert(0, str(project_root))
+            return project_root
+    
+    # Fallback: use parent's parent (scripts -> experiments -> project root)
+    project_root = (current.parent.parent).resolve()
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    return project_root
+
+# Call setup_path and verify
+_project_root = setup_path()
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
 try:
     import yaml  # type: ignore
 except ImportError:  # pragma: no cover
@@ -54,7 +79,7 @@ def parse_args():
         help="Path to dataset directory",
     )
     parser.add_argument(
-        "--batch-size", type=int, default=32, help="Batch size for training"
+        "--batch-size", "--batch_size", type=int, default=32, help="Batch size for training", dest="batch_size"
     )
     parser.add_argument(
         "--num-workers", type=int, default=4, help="Number of data loader workers"
@@ -107,7 +132,9 @@ def main():
             cfg = yaml.safe_load(f) or {}
 
         def cli_overrides(opt: str) -> bool:
-            return opt in sys.argv
+            return any(
+                arg == opt or arg.startswith(f"{opt}=") for arg in sys.argv
+            )
 
         # training section
         tr = cfg.get("training", {})

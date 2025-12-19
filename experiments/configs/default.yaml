@@ -1,8 +1,8 @@
 # Default configuration for ImageNetSubset training
 
 training:
-  epochs: 5
-  batch_size: 16
+  epochs: 10
+  batch_size: 32
   learning_rate: 0.001
   momentum: 0.9
   weight_decay: 0.0001
@@ -13,7 +13,7 @@ model:
   pretrained: true
 
 data:
-  data_dir: datasets
+  data_dir: C:\Users\ba081274\Downloads\ImageNetSubset\ImageNetSubset
   split_ratios:
     train: 0.8
     val: 0.1
@@ -23,7 +23,7 @@ paths:
   checkpoint_dir: experiments/checkpoints
 
 wandb:
-  enabled: false
+  enabled: true
   project: imagenet-subset-randSeed
   run_name: null        # optional
   entity: null          # optional

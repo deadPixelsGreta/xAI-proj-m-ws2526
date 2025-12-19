@@ -185,7 +185,8 @@ def train(
                     "val/accuracy": val_acc,
                     "learning_rate": scheduler.get_last_lr()[0],
                     "epoch_time": epoch_time,
-                }
+                },
+                step=epoch + 1,  # Explicitly set step for proper x-axis in charts
             )
 
         # Save best model
@@ -225,8 +226,12 @@ def train(
         final_path,
     )
 
-    # Finish wandb
+    # Finish wandb with explicit summary
     if wandb_enabled and WANDB_AVAILABLE:
+        # Set explicit summary metrics to ensure correct values in sweep table
+        wandb.run.summary["best_val_accuracy"] = best_val_acc
+        wandb.run.summary["final_val_accuracy"] = val_acc
+        wandb.run.summary["final_train_accuracy"] = train_acc
         wandb.finish()
 
     print("\n" + "=" * 60)
