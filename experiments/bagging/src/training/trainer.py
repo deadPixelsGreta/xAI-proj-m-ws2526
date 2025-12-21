@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 try:
     import wandb
@@ -35,7 +36,12 @@ def train_one_epoch(
 
     start_time = time.time()
 
-    for batch_idx, (inputs, targets) in enumerate(train_loader):
+    pbar = tqdm(
+        enumerate(train_loader),
+        total=len(train_loader),
+        desc=f"Epoch {epoch + 1} [Train]",
+    )
+    for batch_idx, (inputs, targets) in pbar:
         inputs, targets = inputs.to(device), targets.to(device)
 
         optimizer.zero_grad()
@@ -49,13 +55,10 @@ def train_one_epoch(
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
-        # Print progress
-        if (batch_idx + 1) % print_freq == 0:
-            print(
-                f"   Batch {batch_idx + 1}/{len(train_loader)} | "
-                f"Loss: {running_loss / (batch_idx + 1):.4f} | "
-                f"Acc: {100.0 * correct / total:.2f}%"
-            )
+        # Update progress bar
+        current_loss = running_loss / (batch_idx + 1)
+        current_acc = 100.0 * correct / total
+        pbar.set_postfix({"loss": f"{current_loss:.4f}", "acc": f"{current_acc:.2f}%"})
 
     epoch_time = time.time() - start_time
     epoch_loss = running_loss / len(train_loader)
@@ -74,7 +77,8 @@ def validate(
     total = 0
 
     with torch.no_grad():
-        for inputs, targets in val_loader:
+        pbar = tqdm(val_loader, desc="Validating")
+        for inputs, targets in pbar:
             inputs, targets = inputs.to(device), targets.to(device)
             outputs = model(inputs)
             loss = criterion(outputs, targets)
