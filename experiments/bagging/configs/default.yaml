@@ -9,11 +9,11 @@ training:
   num_workers: 0
 
 model:
-  architecture: resnet18
+  architecture: densenet121 
   pretrained: true
 
 data:
-  data_dir: C:\Users\ba081274\Downloads\ImageNetSubset\ImageNetSubset
+  data_dir: ImageNetSubset
   split_ratios:
     train: 0.8
     val: 0.1
@@ -24,7 +24,7 @@ paths:
 
 wandb:
   enabled: true
-  project: imagenet-subset-randSeed
+  project: imagenet-subset-sedge
   run_name: null        # optional
   entity: null          # optional
   tags: []              # optional list of strings

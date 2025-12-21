@@ -14,12 +14,12 @@ try:
 except ImportError:
     WANDB_AVAILABLE = False
 
-from experiments.src.utils import get_device
-from experiments.src.utils.device import get_device_name
-from experiments.src.models import load_checkpoint
-from experiments.src.data import CLASS_NAMES, get_val_transform
-from experiments.src.inference import run_inference
-from experiments.src.inference.ensemble import (
+from experiments.bagging.src.utils import get_device
+from experiments.bagging.src.utils.device import get_device_name
+from experiments.bagging.src.models import load_checkpoint
+from experiments.bagging.src.data import CLASS_NAMES, get_val_transform
+from experiments.bagging.src.inference import run_inference
+from experiments.bagging.src.inference.ensemble import (
     find_default_checkpoints,
     ensemble_predict_extended,
     load_image,
