@@ -1,0 +1,43 @@
+# Quick Reference: Running Your Sweep
+
+## Your Current Sweep ID
+```
+stephpark1plus1-uni/xAI-proj-m-ws2526-experiments_scripts/ksldls9l
+```
+
+## One-Command Start
+```powershell
+wandb agent stephpark1plus1-uni/xAI-proj-m-ws2526-experiments_scripts/ksldls9l
+```
+
+## View Results
+```
+https://wandb.ai/stephpark1plus1-uni/xAI-proj-m-ws2526-experiments_scripts/sweeps/ksldls9l
+```
+
+## Run Multiple Agents (Recommended)
+Open 3 separate PowerShell terminals and run the same command in each:
+```powershell
+wandb agent stephpark1plus1-uni/xAI-proj-m-ws2526-experiments_scripts/ksldls9l
+```
+
+## Expected Output
+```
+✓ Training starts
+✓ Metrics logged to WandB
+✓ After ~10 min per run, agent requests new hyperparameters
+✓ Repeat until sweep complete or you stop the agent
+```
+
+## When You're Done
+Use the best hyperparameters from your sweep for final training:
+```powershell
+python -m experiments.scripts.train --lr <best_lr> --batch-size <best_bs> --wandb
+```
+
+---
+
+**Status**: ✅ Ready to run!  
+**Setup Time**: Complete  
+**Expected Duration**: 1-3 hours with 3 agents  
+**Results**: Watch on WandB dashboard in real-time
