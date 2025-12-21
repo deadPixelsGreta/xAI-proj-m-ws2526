@@ -11,6 +11,8 @@ from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from experiments.bagging.src.utils.checkpointing import CheckpointSaver
+
 try:
     import wandb
 
@@ -153,6 +155,13 @@ def train(
     best_val_acc = 0.0
     num_classes = config.get("num_classes", 10)
 
+     # Initialize checkpoint saver
+    checkpoint_saver = CheckpointSaver(
+        dirpath=save_path,
+        num_classes=num_classes,
+        model_name=model_name,
+    )
+
     print("\n" + "=" * 60)
     print("Starting Training")
     print("=" * 60)
@@ -193,27 +202,33 @@ def train(
                 step=epoch + 1,  # Explicitly set step for proper x-axis in charts
             )
 
-        # Save best model
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
-            checkpoint_path = save_path / f"best_{model_name}.pth"
-            torch.save(
-                {
-                    "epoch": epoch,
-                    "model_name": model_name,
-                    "model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "val_acc": val_acc,
-                    "val_loss": val_loss,
-                    "num_classes": num_classes,
-                },
-                checkpoint_path,
-            )
-            print(f"   New best model saved! (Val Acc: {val_acc:.2f}%)")
+        # Save best model new way with Early Stopping
+        early_stop = checkpoint_saver(model, epoch, val_acc, val_loss, optimizer)
+        if early_stop:
+            print("Early stopping triggered. Stopping training.")
+            break
+        
+        # Save best model old way
+        # if val_acc > best_val_acc:
+        #     best_val_acc = val_acc
+        #     checkpoint_path = save_path / f"best_{model_name}.pth"
+        #     torch.save(
+        #         {
+        #             "epoch": epoch,
+        #             "model_name": model_name,
+        #             "model_state_dict": model.state_dict(),
+        #             "optimizer_state_dict": optimizer.state_dict(),
+        #             "val_acc": val_acc,
+        #             "val_loss": val_loss,
+        #             "num_classes": num_classes,
+        #         },
+        #         checkpoint_path,
+        #     )
+        #     print(f"   New best model saved! (Val Acc: {val_acc:.2f}%)")
 
-            if wandb_enabled and WANDB_AVAILABLE:
-                wandb.run.summary["best_val_accuracy"] = val_acc
-                wandb.run.summary["best_epoch"] = epoch + 1
+        #     if wandb_enabled and WANDB_AVAILABLE:
+        #         wandb.run.summary["best_val_accuracy"] = val_acc
+        #         wandb.run.summary["best_epoch"] = epoch + 1
 
     # Save final model
     final_path = save_path / f"final_{model_name}.pth"
