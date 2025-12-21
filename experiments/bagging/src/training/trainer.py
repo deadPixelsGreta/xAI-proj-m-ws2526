@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
+from torchvision.transforms import v2
 from tqdm import tqdm
 
 try:
@@ -27,6 +28,7 @@ def train_one_epoch(
     device: torch.device,
     epoch: int,
     print_freq: int = 50,
+    mixup_cutmix: Optional[Any] = None,
 ) -> Tuple[float, float, float]:
     """Train for one epoch and return (loss, accuracy, seconds)."""
     model.train()
@@ -44,6 +46,9 @@ def train_one_epoch(
     for batch_idx, (inputs, targets) in pbar:
         inputs, targets = inputs.to(device), targets.to(device)
 
+        if mixup_cutmix:
+            inputs, targets = mixup_cutmix(inputs, targets)
+
         optimizer.zero_grad()
         outputs = model(inputs)
         loss = criterion(outputs, targets)
@@ -51,9 +56,18 @@ def train_one_epoch(
         optimizer.step()
 
         running_loss += loss.item()
+
+        # For accuracy, use the argmax of the target if it's been mixed (soft labels)
+        if mixup_cutmix:
+            # If targets are soft labels (from Mixup/Cutmix), we usually don't compute training accuracy the same way
+            # or we use the original hard labels for metrics. But for simplicity:
+            _, targets_idx = targets.max(1) if targets.ndim > 1 else (None, targets)
+        else:
+            targets_idx = targets
+
         _, predicted = outputs.max(1)
         total += targets.size(0)
-        correct += predicted.eq(targets).sum().item()
+        correct += predicted.eq(targets_idx).sum().item()
 
         # Update progress bar
         current_loss = running_loss / (batch_idx + 1)
@@ -157,13 +171,26 @@ def train(
     print("Starting Training")
     print("=" * 60)
 
+    # Setup SOTA batch-level augmentations
+    mixup_cutmix = None
+    if config.get("use_sota_aug", True):
+        mixup = v2.Mixup(num_classes=num_classes, alpha=1.0)
+        cutmix = v2.Cutmix(num_classes=num_classes, alpha=1.0)
+        mixup_cutmix = v2.RandomChoice([mixup, cutmix])
+
     for epoch in range(epochs):
         print(f"\nEpoch {epoch + 1}/{epochs}")
         print("-" * 40)
 
         # Train
         train_loss, train_acc, epoch_time = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, epoch
+            model,
+            train_loader,
+            criterion,
+            optimizer,
+            device,
+            epoch,
+            mixup_cutmix=mixup_cutmix,
         )
 
         # Validate
@@ -173,7 +200,7 @@ def train(
         scheduler.step()
 
         # Print epoch summary
-        print(f"\n   Epoch Summary:")
+        print("\n   Epoch Summary:")
         print(f"   Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}%")
         print(f"   Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}%")
         print(f"   Time: {epoch_time:.1f}s | LR: {scheduler.get_last_lr()[0]:.6f}")

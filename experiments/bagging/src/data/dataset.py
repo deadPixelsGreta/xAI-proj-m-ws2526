@@ -26,8 +26,22 @@ IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
 
-def get_train_transform() -> transforms.Compose:
-    """Return training transforms with resize, crop, flip, and ImageNet normalization."""
+def get_train_transform(sota: bool = True) -> transforms.Compose:
+    """Return training transforms with resize, crop, flip, and ImageNet normalization.
+
+    Args:
+        sota: If True, uses TrivialAugmentWide (SOTA). If False, uses legacy RandAugment.
+    """
+    if sota:
+        return transforms.Compose(
+            [
+                transforms.RandomResizedCrop(224, scale=(0.08, 1.0)),
+                transforms.RandomHorizontalFlip(),
+                transforms.TrivialAugmentWide(),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+            ]
+        )
     return transforms.Compose(
         [
             transforms.RandomResizedCrop(224, scale=(0.7, 1.0)),
@@ -55,7 +69,11 @@ def get_val_transform() -> transforms.Compose:
 
 
 def create_data_loaders(
-    data_dir: str, batch_size: int = 32, num_workers: int = 4, pin_memory: bool = True
+    data_dir: str,
+    batch_size: int = 32,
+    num_workers: int = 4,
+    pin_memory: bool = True,
+    sota_aug: bool = True,
 ) -> Tuple[DataLoader, DataLoader, int]:
     """Create data loaders from an ImageFolder layout under data_dir/train and data_dir/val.
 
@@ -64,7 +82,9 @@ def create_data_loaders(
     train_dir = os.path.join(data_dir, "train")
     val_dir = os.path.join(data_dir, "val")
 
-    train_dataset = datasets.ImageFolder(train_dir, transform=get_train_transform())
+    train_dataset = datasets.ImageFolder(
+        train_dir, transform=get_train_transform(sota=sota_aug)
+    )
     val_dataset = datasets.ImageFolder(val_dir, transform=get_val_transform())
 
     train_loader = DataLoader(

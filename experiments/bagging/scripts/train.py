@@ -102,6 +102,11 @@ def parse_args():
     parser.add_argument(
         "--seed", type=int, default=None, help="Random seed for reproducibility"
     )
+    parser.add_argument(
+        "--no-sota",
+        action="store_true",
+        help="Disable SOTA data augmentation (TrivialAugmentWide, Mixup, Cutmix)",
+    )
 
     # Output arguments
     parser.add_argument(
@@ -219,7 +224,7 @@ def main():
 
     # Load dataset info
     dataset_info = get_dataset_info(args.data_dir)
-    print(f"\n Dataset Summary:")
+    print("\n Dataset Summary:")
     print(f"   Training samples: {dataset_info['train_samples']}")
     print(f"   Validation samples: {dataset_info['val_samples']}")
     print(f"   Classes: {dataset_info['classes']}")
@@ -227,7 +232,7 @@ def main():
 
     # Create data loaders
     train_loader, val_loader, num_classes = create_data_loaders(
-        args.data_dir, args.batch_size, args.num_workers
+        args.data_dir, args.batch_size, args.num_workers, sota_aug=not args.no_sota
     )
 
     # Create model
@@ -246,6 +251,7 @@ def main():
         "weight_decay": args.weight_decay,
         "batch_size": args.batch_size,
         "num_classes": num_classes,
+        "use_sota_aug": not args.no_sota,
     }
 
     print(f"\n Training Configuration:")
