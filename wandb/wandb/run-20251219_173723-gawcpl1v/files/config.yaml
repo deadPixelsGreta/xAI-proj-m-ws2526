@@ -1,0 +1,86 @@
+_wandb:
+    value:
+        cli_version: 0.23.1
+        e:
+            9v5fo031l2kxevjdemmh03goqc4lm0t7:
+                args:
+                    - --batch_size=64
+                    - --config=experiments/configs/default.yaml
+                    - --lr=0.06353504478038684
+                    - --model=resnet18
+                    - --seed=0
+                codePath: experiments\scripts\train.py
+                codePathLocal: experiments\scripts\train.py
+                cpu_count: 10
+                cpu_count_logical: 16
+                cudaVersion: "12.8"
+                disk:
+                    /:
+                        total: "536863989760"
+                        used: "246081597440"
+                email: stephpark1plus1@gmail.com
+                executable: C:\Users\ba081274\.conda\envs\xai\python.exe
+                git:
+                    commit: 8cce6d5f7cb9dc5314aeb7c23c8f9029344b496a
+                    remote: https://github.com/deadPixelsGreta/xAI-proj-m-ws2526.git
+                gpu: NVIDIA RTX A4000
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 6144
+                      memoryTotal: "17171480576"
+                      name: NVIDIA RTX A4000
+                      uuid: GPU-2e8bc67b-cf8c-893a-7c65-d69b2cd550d0
+                host: GU130103-18
+                memory:
+                    total: "68393086976"
+                os: Windows-10-10.0.26100-SP0
+                program: C:\Users\ba081274\Documents\xAI\xAI-proj-m-ws2526\experiments\scripts\train.py
+                python: CPython 3.11.14
+                root: ./wandb
+                startedAt: "2025-12-19T16:37:23.406212Z"
+                writerId: 9v5fo031l2kxevjdemmh03goqc4lm0t7
+        m: []
+        python_version: 3.11.14
+        t:
+            "1":
+                - 1
+                - 41
+            "2":
+                - 1
+                - 41
+            "3":
+                - 1
+                - 2
+                - 13
+                - 14
+                - 15
+                - 16
+                - 61
+                - 62
+            "4": 3.11.14
+            "5": 0.23.1
+            "8":
+                - 3
+            "12": 0.23.1
+            "13": windows-amd64
+architecture:
+    value: resnet18_seed0
+batch_size:
+    value: 64
+config:
+    value: experiments/configs/default.yaml
+epochs:
+    value: 10
+lr:
+    value: 0.06353504478038684
+model:
+    value: resnet18
+momentum:
+    value: 0.9
+num_classes:
+    value: 10
+seed:
+    value: 0
+weight_decay:
+    value: 0.0001

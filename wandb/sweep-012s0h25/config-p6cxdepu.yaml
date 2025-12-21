@@ -1,0 +1,12 @@
+wandb_version: 1
+
+batch_size:
+  value: 64
+config:
+  value: experiments/configs/default.yaml
+lr:
+  value: 0.00857779160961727
+model:
+  value: resnet18
+seed:
+  value: 0
