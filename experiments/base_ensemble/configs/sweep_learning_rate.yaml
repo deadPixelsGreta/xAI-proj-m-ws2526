@@ -1,0 +1,39 @@
+# WandB Sweep Configuration for Learning Rate Tuning
+# This file defines a hyperparameter sweep for optimizing learning rate
+
+program: python
+command:
+  - ${env}
+  - ${interpreter}
+  - -m
+  - experiments.base_ensemble.scripts.train
+  - ${args}
+method: bayes  # Options: grid, random, bayes (Bayesian optimization is most efficient)
+metric:
+  name: val_acc  # Metric to optimize
+  goal: maximize  # Maximize validation accuracy
+
+parameters:
+  # Fixed parameters from config
+  config:
+    value: experiments/base_ensemble/configs/default.yaml
+  model:
+    value: resnet34
+  seed:
+    value: 0
+  
+  # Hyperparameters to sweep
+  lr:
+    distribution: log_uniform_values
+    min: 0.00001  # 1e-5
+    max: 0.1      # 1e-1
+    
+  # Optional: also sweep batch size for robustness
+  batch_size:
+    values: [16, 32, 64]
+
+# Early stopping to save compute
+early_terminate:
+  type: hyperband
+  min_iter: 3
+  max_iter: 10
