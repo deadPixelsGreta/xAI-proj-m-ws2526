@@ -1,7 +1,13 @@
 # WandB Sweep Configuration for Learning Rate Tuning
 # This file defines a hyperparameter sweep for optimizing learning rate
 
-program: -m experiments.bagging.scripts.train
+program: python
+command:
+  - ${env}
+  - ${interpreter}
+  - -m
+  - experiments.bagging.scripts.train
+  - ${args}
 method: bayes  # Options: grid, random, bayes (Bayesian optimization is most efficient)
 metric:
   name: val_acc  # Metric to optimize
