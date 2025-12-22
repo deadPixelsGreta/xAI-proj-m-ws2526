@@ -38,11 +38,11 @@ try:
 except ImportError:  # pragma: no cover
     yaml = None
 
-from experiments.bagging.src.utils.device import get_device, set_seed
-from experiments.bagging.src.utils.device import get_device_name
-from experiments.bagging.src.models import SUPPORTED_MODELS, create_model
-from experiments.bagging.src.data import create_data_loaders, get_dataset_info
-from experiments.bagging.src.training import train
+from experiments.base_ensemble.src.utils.device import get_device, set_seed  # noqa: E402
+from experiments.base_ensemble.src.utils.device import get_device_name  # noqa: E402
+from experiments.base_ensemble.src.models import SUPPORTED_MODELS, create_model  # noqa: E402
+from experiments.base_ensemble.src.data import create_data_loaders, get_dataset_info  # noqa: E402
+from experiments.base_ensemble.src.training import train  # noqa: E402
 
 
 def parse_args():
@@ -252,9 +252,10 @@ def main():
         "batch_size": args.batch_size,
         "num_classes": num_classes,
         "use_sota_aug": not args.no_sota,
+        "seed": args.seed,  # Log seed to WandB for reproducibility tracking
     }
 
-    print(f"\n Training Configuration:")
+    print("\n Training Configuration:")
     print(f"   Epochs: {args.epochs}")
     print(f"   Batch size: {args.batch_size}")
     print(f"   Learning rate: {args.lr}")

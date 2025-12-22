@@ -1,6 +1,5 @@
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 import argparse
 import sys
 from pathlib import Path
@@ -9,9 +8,9 @@ from tqdm import tqdm
 # Add project root to path
 sys.path.append(str(Path(__file__).resolve().parents[3]))
 
-from experiments.bagging.src.models import load_checkpoint
-from experiments.bagging.src.data import create_data_loaders, create_test_loader
-from experiments.bagging.src.utils import get_device
+from experiments.base_ensemble.src.models import load_checkpoint
+from experiments.base_ensemble.src.data import create_data_loaders, create_test_loader
+from experiments.base_ensemble.src.utils import get_device
 from experiments.SEDGE.models.sedge import SEDGEModel
 from experiments.SEDGE.data.feature_extractor import ImageFeatureExtractor
 

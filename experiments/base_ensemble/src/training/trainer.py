@@ -7,7 +7,7 @@ from typing import Tuple, Dict, Any, Optional
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2
 from tqdm import tqdm
@@ -29,8 +29,8 @@ def train_one_epoch(
     epoch: int,
     print_freq: int = 50,
     mixup_cutmix: Optional[Any] = None,
-) -> Tuple[float, float, float]:
-    """Train for one epoch and return (loss, accuracy, seconds)."""
+) -> Tuple[float, float, float, float]:
+    """Train for one epoch and return (loss, accuracy, seconds, grad_norm)."""
     model.train()
     running_loss = 0.0
     correct = 0
@@ -53,6 +53,14 @@ def train_one_epoch(
         outputs = model(inputs)
         loss = criterion(outputs, targets)
         loss.backward()
+
+        # Compute gradient norm before optimizer step (for monitoring)
+        total_norm = 0.0
+        for p in model.parameters():
+            if p.grad is not None:
+                total_norm += p.grad.data.norm(2).item() ** 2
+        grad_norm = total_norm**0.5
+
         optimizer.step()
 
         running_loss += loss.item()
@@ -78,7 +86,7 @@ def train_one_epoch(
     epoch_loss = running_loss / len(train_loader)
     epoch_acc = 100.0 * correct / total
 
-    return epoch_loss, epoch_acc, epoch_time
+    return epoch_loss, epoch_acc, epoch_time, grad_norm
 
 
 def validate(
@@ -132,7 +140,17 @@ def train(
         momentum=config.get("momentum", 0.9),
         weight_decay=config.get("weight_decay", 1e-4),
     )
-    scheduler = StepLR(optimizer, step_size=7, gamma=0.1)
+
+    # Configurable LR scheduler
+    scheduler_type = config.get("scheduler", "step").lower()
+    if scheduler_type == "cosine":
+        scheduler = CosineAnnealingLR(optimizer, T_max=config.get("epochs", 5))
+    else:  # Default to StepLR
+        scheduler = StepLR(
+            optimizer,
+            step_size=config.get("scheduler_step_size", 7),
+            gamma=config.get("scheduler_gamma", 0.1),
+        )
 
     # Create save directory
     save_path = Path(save_dir)
@@ -167,6 +185,10 @@ def train(
     best_val_acc = 0.0
     num_classes = config.get("num_classes", 10)
 
+    # Early stopping configuration
+    early_stopping_patience = config.get("early_stopping_patience", 0)  # 0 = disabled
+    epochs_without_improvement = 0
+
     print("\n" + "=" * 60)
     print("Starting Training")
     print("=" * 60)
@@ -183,7 +205,7 @@ def train(
         print("-" * 40)
 
         # Train
-        train_loss, train_acc, epoch_time = train_one_epoch(
+        train_loss, train_acc, epoch_time, grad_norm = train_one_epoch(
             model,
             train_loader,
             criterion,
@@ -207,6 +229,10 @@ def train(
 
         # Log to wandb
         if wandb_enabled and WANDB_AVAILABLE:
+            # Compute additional metrics
+            generalization_gap = train_acc - val_acc  # Positive = overfitting
+            throughput = len(train_loader.dataset) / epoch_time  # samples/sec
+
             wandb.log(
                 {
                     "epoch": epoch + 1,
@@ -216,13 +242,19 @@ def train(
                     "val/accuracy": val_acc,
                     "learning_rate": scheduler.get_last_lr()[0],
                     "epoch_time": epoch_time,
+                    # New metrics
+                    "metrics/generalization_gap": generalization_gap,
+                    "metrics/grad_norm": grad_norm,
+                    "metrics/throughput": throughput,
+                    "metrics/loss_gap": val_loss - train_loss,
                 },
-                step=epoch + 1,  # Explicitly set step for proper x-axis in charts
+                step=epoch + 1,
             )
 
         # Save best model
         if val_acc > best_val_acc:
             best_val_acc = val_acc
+            epochs_without_improvement = 0  # Reset counter
             checkpoint_path = save_path / f"best_{model_name}.pth"
             torch.save(
                 {
@@ -241,6 +273,21 @@ def train(
             if wandb_enabled and WANDB_AVAILABLE:
                 wandb.run.summary["best_val_accuracy"] = val_acc
                 wandb.run.summary["best_epoch"] = epoch + 1
+        else:
+            epochs_without_improvement += 1
+
+        # Early stopping check
+        if (
+            early_stopping_patience > 0
+            and epochs_without_improvement >= early_stopping_patience
+        ):
+            print(
+                f"\n   Early stopping triggered after {epochs_without_improvement} epochs without improvement."
+            )
+            if wandb_enabled and WANDB_AVAILABLE:
+                wandb.run.summary["early_stopped"] = True
+                wandb.run.summary["stopped_at_epoch"] = epoch + 1
+            break
 
     # Save final model
     final_path = save_path / f"final_{model_name}.pth"

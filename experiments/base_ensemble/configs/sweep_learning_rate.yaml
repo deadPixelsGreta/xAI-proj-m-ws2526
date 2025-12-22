@@ -6,7 +6,7 @@ command:
   - ${env}
   - ${interpreter}
   - -m
-  - experiments.bagging.scripts.train
+  - experiments.base_ensemble.scripts.train
   - ${args}
 method: bayes  # Options: grid, random, bayes (Bayesian optimization is most efficient)
 metric:
@@ -16,7 +16,7 @@ metric:
 parameters:
   # Fixed parameters from config
   config:
-    value: experiments/bagging/configs/default.yaml
+    value: experiments/base_ensemble/configs/default.yaml
   model:
     value: resnet34
   seed:

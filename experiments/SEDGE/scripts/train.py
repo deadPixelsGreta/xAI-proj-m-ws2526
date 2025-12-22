@@ -7,12 +7,11 @@ from pathlib import Path
 # Add project root to path
 sys.path.append(str(Path(__file__).resolve().parents[3]))
 
-from experiments.bagging.src.models import load_checkpoint
-from experiments.bagging.src.data import create_data_loaders
-from experiments.bagging.src.utils import get_device
+from experiments.base_ensemble.src.models import load_checkpoint
+from experiments.base_ensemble.src.data import create_data_loaders
+from experiments.base_ensemble.src.utils import get_device
 from experiments.SEDGE.models.sedge import SEDGEModel
 from experiments.SEDGE.data.feature_extractor import ImageFeatureExtractor
-from experiments.SEDGE.data.corruptions import get_robust_transform
 from experiments.SEDGE.training.sedge_trainer import SEDGETrainer
 
 
@@ -25,16 +24,18 @@ def parse_args():
         type=str,
         nargs="+",
         default=[
-            "experiments/bagging/checkpoints/best_densenet121.pth",
-            "experiments/bagging/checkpoints/best_resnet34.pth",
-            "experiments/bagging/checkpoints/best_efficientnet_b0.pth",
+            "experiments/base_ensemble/checkpoints/best_densenet121.pth",
+            "experiments/base_ensemble/checkpoints/best_resnet34.pth",
+            "experiments/base_ensemble/checkpoints/best_efficientnet_b0.pth",
         ],
     )
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument(
-        "--save-path", type=str, default="experiments/bagging/checkpoints/sedge.pth"
+        "--save-path",
+        type=str,
+        default="experiments/base_ensemble/checkpoints/sedge.pth",
     )
     parser.add_argument(
         "--num-workers",

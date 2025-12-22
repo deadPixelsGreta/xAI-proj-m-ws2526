@@ -17,8 +17,17 @@ def ensemble_predict(
     image_tensor: torch.Tensor,
     device: torch.device,
     return_individual: bool = False,
+    weights: Optional[List[float]] = None,
 ) -> Tuple[torch.Tensor, Optional[List[torch.Tensor]]]:
     """Average softmax probabilities across models for one image tensor.
+
+    Args:
+        models: List of models to ensemble.
+        image_tensor: Input image tensor.
+        device: Device to run inference on.
+        return_individual: If True, also return individual model probabilities.
+        weights: Optional list of weights for weighted averaging (e.g., validation accuracies).
+                 If None, uses simple averaging.
 
     Returns (ensemble_probs, individual_probs_or_none).
     """
@@ -31,9 +40,17 @@ def ensemble_predict(
             probs = F.softmax(outputs, dim=1)
             all_probs.append(probs)
 
-    # Average probabilities
+    # Stack probabilities: [num_models, batch, num_classes]
     stacked_probs = torch.stack(all_probs, dim=0)
-    ensemble_probs = torch.mean(stacked_probs, dim=0)
+
+    if weights is not None:
+        # Weighted averaging based on provided weights (e.g., val accuracies)
+        weight_tensor = torch.tensor(weights, device=device, dtype=torch.float32)
+        weight_tensor = F.softmax(weight_tensor, dim=0)  # Normalize to sum to 1
+        ensemble_probs = (stacked_probs * weight_tensor.view(-1, 1, 1)).sum(dim=0)
+    else:
+        # Simple averaging
+        ensemble_probs = torch.mean(stacked_probs, dim=0)
 
     if return_individual:
         return ensemble_probs, all_probs
@@ -196,7 +213,7 @@ def run_inference(
 
     # Print diagnostic metrics
     if show_diagnostics:
-        print(f"\n Ensemble Diagnostics:")
+        print("\n Ensemble Diagnostics:")
         print(f"   Confidence Score:     {result.confidence:5.1f}%")
         print(f"   Ensemble Disagreement: {result.disagreement:.4f}")
 
@@ -217,7 +234,7 @@ def run_inference(
 
     # Always show individual model predictions for diagnostics
     if show_individual or show_diagnostics:
-        print(f"\n Individual Model Predictions:")
+        print("\n Individual Model Predictions:")
         for model_name, (pred_class, pred_conf) in zip(
             model_names, result.individual_predictions
         ):
