@@ -13,7 +13,7 @@ model:
   pretrained: true
 
 data:
-  data_dir: ImageNetSubset
+  data_dir: C:\Users\ba081274\Downloads\ImageNetSubset\ImageNetSubset\
   split_ratios:
     train: 0.8
     val: 0.1
