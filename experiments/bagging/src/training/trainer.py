@@ -174,8 +174,8 @@ def train(
     # Setup SOTA batch-level augmentations
     mixup_cutmix = None
     if config.get("use_sota_aug", True):
-        mixup = v2.Mixup(num_classes=num_classes, alpha=1.0)
-        cutmix = v2.Cutmix(num_classes=num_classes, alpha=1.0)
+        mixup = v2.MixUp(num_classes=num_classes, alpha=1.0)
+        cutmix = v2.CutMix(num_classes=num_classes, alpha=1.0)
         mixup_cutmix = v2.RandomChoice([mixup, cutmix])
 
     for epoch in range(epochs):

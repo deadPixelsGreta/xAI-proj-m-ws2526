@@ -10,9 +10,9 @@ metric:
 parameters:
   # Fixed parameters from config
   config:
-    value: experiments/configs/default.yaml
+    value: experiments/bagging/configs/default.yaml
   model:
-    value: resnet18
+    value: resnet34
   seed:
     value: 0
   
