@@ -38,7 +38,7 @@ try:
 except ImportError:  # pragma: no cover
     yaml = None
 
-from experiments.bagging.src.utils import get_device, set_seed
+from experiments.bagging.src.utils.device import get_device, set_seed
 from experiments.bagging.src.utils.device import get_device_name
 from experiments.bagging.src.models import SUPPORTED_MODELS, create_model
 from experiments.bagging.src.data import create_data_loaders, get_dataset_info
