@@ -160,6 +160,7 @@ def train(
         dirpath=save_path,
         num_classes=num_classes,
         model_name=model_name,
+        wandb_enabled=(wandb_enabled and WANDB_AVAILABLE),  # Pass wandb_enabled flag
     )
 
     print("\n" + "=" * 60)

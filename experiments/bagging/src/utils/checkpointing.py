@@ -1,12 +1,8 @@
 import os
 import torch
+import wandb
 
 # from https://gist.github.com/amaarora/a2d88bfa971ce89aa5a13e006a7c94e5
-
-# TODO: integret with wandb; maybe not needed
-# if wandb_enabled and WANDB_AVAILABLE:
-#                 wandb.run.summary["best_val_accuracy"] = val_acc
-#                 wandb.run.summary["best_epoch"] = epoch + 1
 
 class CheckpointSaver:
     def __init__(
@@ -14,6 +10,7 @@ class CheckpointSaver:
         dirpath,
         num_classes,
         model_name,
+        wandb_enabled,
         # config=None,
         top_n=1,
         early_stop_thresh=5,
@@ -23,6 +20,7 @@ class CheckpointSaver:
         self.top_n = top_n
         # self.config = dict(config)
         self.model_name = model_name
+        self.wandb_enabled = wandb_enabled
         self.early_stop_thresh = early_stop_thresh
         self.early_stop = False
         self.top_model_paths = []
@@ -46,6 +44,9 @@ class CheckpointSaver:
             torch.save(data, model_path)
             
             print(f"   New best model saved! (Val Acc: {val_acc:.2f}%)")
+            if self.wandb_enabled:
+                wandb.run.summary["best_val_accuracy"] = val_acc
+                wandb.run.summary["best_epoch"] = epoch + 1
 
             self.top_model_paths.append({'path': model_path, 'score': val_acc, 'epoch': epoch})
             self.top_model_paths = sorted(self.top_model_paths, key=lambda o: o['score'], reverse=True)
