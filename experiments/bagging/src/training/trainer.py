@@ -112,10 +112,21 @@ def train(
     Config expects keys: epochs, lr, momentum, weight_decay, batch_size, num_classes.
     Returns a summary dict with best/final metrics and checkpoint paths.
     """
+    # Backbone freezing
+    freeze_backbone = config.get("freeze_backbone", False)
+    opt_models_parameters = model.parameters()
+    if freeze_backbone:
+        print("Freezing backbone parameters...")
+        opt_models_parameters = model.classifier.parameters()
+        for name, param in model.named_parameters():
+            if "classifier" not in name:
+                param.requires_grad = False    
+        print("Backbone frozen.")
+
     # Setup
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer = optim.SGD(
-        model.parameters(),
+        opt_models_parameters,
         lr=config.get("lr", 0.001),
         momentum=config.get("momentum", 0.9),
         weight_decay=config.get("weight_decay", 1e-4),
@@ -161,6 +172,8 @@ def train(
         num_classes=num_classes,
         model_name=model_name,
         wandb_enabled=(wandb_enabled and WANDB_AVAILABLE),  # Pass wandb_enabled flag
+        top_n=config.get("top_n_checkpoints", 1),
+        early_stop_thresh=config.get("early_stopping_thresh", 5),
     )
 
     print("\n" + "=" * 60)
