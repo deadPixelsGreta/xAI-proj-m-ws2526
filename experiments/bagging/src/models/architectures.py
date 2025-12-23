@@ -9,7 +9,7 @@ from torchvision import models
 
 
 # Supported model architectures
-SUPPORTED_MODELS = ["densenet121", "resnet34", "efficientnet_b0"]
+SUPPORTED_MODELS = ["densenet121", "resnet34", "resnet50", "efficientnet_b0"]
 
 
 def create_model(
@@ -37,6 +37,13 @@ def create_model(
             model = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1)
         else:
             model = models.resnet34(weights=None)
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+    elif model_name == "resnet50":
+        if pretrained:
+            model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+        else:
+            model = models.resnet50(weights=None)
         model.fc = nn.Linear(model.fc.in_features, num_classes)
 
     elif model_name == "efficientnet_b0":
