@@ -117,16 +117,41 @@ def train(
     opt_models_parameters = model.parameters()
     if freeze_backbone:
         print("Freezing backbone parameters...")
-        opt_models_parameters = model.classifier.parameters()
+        
+        # Determine classifier layer name (ResNet uses 'fc', others might use 'classifier')
+        classifier_name = None
+        if hasattr(model, 'fc'):
+            classifier_name = 'fc'
+            opt_models_parameters = model.fc.parameters()
+        elif hasattr(model, 'classifier'):
+            classifier_name = 'classifier'
+            opt_models_parameters = model.classifier.parameters()
+        else:
+            raise AttributeError("Model has neither 'fc' nor 'classifier' attribute")
+        
+        # Freeze all parameters except the classifier
         for name, param in model.named_parameters():
-            if "classifier" not in name:
+            if classifier_name not in name:
                 param.requires_grad = False    
-        print("Backbone frozen.")
+        print(f"Backbone frozen. Training only '{classifier_name}' layer.")
+    
+    # print frozen and unfrozen param, for check, if frozen works
+    total_params = sum(p.numel() for p in model.parameters())
+    frozen_params = sum(p.numel() for p in model.parameters() if not p.requires_grad)
+    unfrozen_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    #opt_params = sum(p.numel() for p in opt_models_parameters) -> error
+
+    print(f"Total parameters: {total_params}")
+    print(f"Frozen parameters: {frozen_params}")
+    print(f"Unfrozen parameters: {unfrozen_params}")
+    #print(f"Optimzer parameters: {opt_params}") -> error
+        
 
     # Setup
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
     optimizer = optim.SGD(
         opt_models_parameters,
+        #model.parameters(),
         lr=config.get("lr", 0.001),
         momentum=config.get("momentum", 0.9),
         weight_decay=config.get("weight_decay", 1e-4),

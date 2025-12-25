@@ -155,6 +155,15 @@ def main():
             args.weight_decay = float(tr["weight_decay"])
         if "num_workers" in tr and not cli_overrides("--num-workers"):
             args.num_workers = int(tr["num_workers"])
+        # early_stopping_thresh in yaml
+        if "early_stopping_thresh" in tr and not cli_overrides("--stop-thresh"):
+            args.early_stopping_thresh = int(tr["early_stopping_thresh"])
+        # top_n_checkpoints in yaml
+        if "top_n_checkpoints" in tr and not cli_overrides("--top-n"):
+            args.top_n_checkpoints = int(tr["top_n_checkpoints"])
+        # freeze_backbone in yaml
+        if "freeze_backbone" in tr and not cli_overrides("--freeze-backbone"):
+            args.freeze_backbone = bool(tr["freeze_backbone"])
 
         # model section
         md = cfg.get("model", {})
@@ -246,6 +255,9 @@ def main():
         "weight_decay": args.weight_decay,
         "batch_size": args.batch_size,
         "num_classes": num_classes,
+        "early_stopping_thresh": args.early_stopping_thresh,
+        "top_n_checkpoints": args.top_n_checkpoints,
+        "freeze_backbone": args.freeze_backbone,
     }
 
     print(f"\n Training Configuration:")
@@ -257,6 +269,9 @@ def main():
     print(f"   Pretrained: {pretrained}")
     print(f"   Save directory: {args.save_dir}")
     print(f"   Wandb logging: {args.wandb}")
+    print(f"   Early stopping thresh: {args.early_stopping_thresh}")
+    print(f"   Top N checkpoints: {args.top_n_checkpoints}")
+    print(f"   Freeze backbone: {args.freeze_backbone}")
 
     # Wandb config
     wandb_config = {
