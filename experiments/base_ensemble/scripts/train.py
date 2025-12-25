@@ -103,6 +103,13 @@ def parse_args():
         "--seed", type=int, default=None, help="Random seed for reproducibility"
     )
     parser.add_argument(
+        "--patience",
+        type=int,
+        default=0,
+        help="Early stopping patience (0 to disable)",
+        dest="early_stopping_patience",
+    )
+    parser.add_argument(
         "--no-sota",
         action="store_true",
         help="Disable SOTA data augmentation (TrivialAugmentWide, Mixup, Cutmix)",
@@ -160,6 +167,8 @@ def main():
             args.weight_decay = float(tr["weight_decay"])
         if "num_workers" in tr and not cli_overrides("--num-workers"):
             args.num_workers = int(tr["num_workers"])
+        if "early_stopping_patience" in tr and not cli_overrides("--patience"):
+            args.early_stopping_patience = int(tr["early_stopping_patience"])
 
         # model section
         md = cfg.get("model", {})
@@ -253,6 +262,7 @@ def main():
         "num_classes": num_classes,
         "use_sota_aug": not args.no_sota,
         "seed": args.seed,  # Log seed to WandB for reproducibility tracking
+        "early_stopping_patience": args.early_stopping_patience,
     }
 
     print("\n Training Configuration:")
