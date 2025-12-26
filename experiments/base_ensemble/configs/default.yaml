@@ -29,7 +29,7 @@ paths:
 
 wandb:
   enabled: true
-  project: imagenet-subset-sedge
+  project: xAI-proj-m-ws2526_SP
   run_name: null        # optional
   entity: null          # optional
   tags: []              # optional list of strings
