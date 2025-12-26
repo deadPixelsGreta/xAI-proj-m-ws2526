@@ -76,13 +76,6 @@ def load_checkpoint(
             break
 
     if model_name is None:
-        # If we can't match, default to resnet18 but warn?
-        # For now, just raise the error from create_model if passed raw,
-        # or fallback. The traceback showed it passed 'efficientnet_b0_seed0'
-        # which means it didn't match cleanly if we just used equality.
-        # But here we are using substring matching 'if supported in raw_name'.
-        # 'efficientnet_b0' IS in 'efficientnet_b0_seed0', so this loop fixes it.
-        # If no match found, maybe it's completely unknown.
         model_name = raw_name  # Let create_model raise the specific error if needed
 
     # Get number of classes from checkpoint
