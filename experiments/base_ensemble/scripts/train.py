@@ -131,6 +131,20 @@ def parse_args():
         "--wandb-project", type=str, default="imagenet-subset", help="W&B project name"
     )
     parser.add_argument("--wandb-run-name", type=str, default=None, help="W&B run name")
+    parser.add_argument("--wandb-job-type", type=str, default=None, help="W&B job type")
+    parser.add_argument("--wandb-entity", type=str, default=None, help="W&B entity")
+    parser.add_argument("--wandb-tags", nargs="+", default=None, help="W&B tags")
+    parser.add_argument("--wandb-notes", type=str, default=None, help="W&B notes")
+    parser.add_argument(
+        "--wandb-mode",
+        type=str,
+        default=None,
+        help="W&B mode (online/offline/disabled)",
+    )
+    parser.add_argument(
+        "--wandb-dir", type=str, default=None, help="W&B save directory"
+    )
+    parser.add_argument("--wandb-group", type=str, default=None, help="W&B group name")
 
     return parser.parse_args()
 
@@ -198,19 +212,19 @@ def main():
         # Optional W&B fields from YAML (no CLI flags defined for these)
         if "run_name" in wb:
             args.wandb_run_name = wb.get("run_name")
-        if "entity" in wb:
+        if "entity" in wb and not cli_overrides("--wandb-entity"):
             args.wandb_entity = wb.get("entity")
-        if "tags" in wb:
+        if "tags" in wb and not cli_overrides("--wandb-tags"):
             args.wandb_tags = wb.get("tags")
-        if "notes" in wb:
+        if "notes" in wb and not cli_overrides("--wandb-notes"):
             args.wandb_notes = wb.get("notes")
-        if "mode" in wb:
+        if "mode" in wb and not cli_overrides("--wandb-mode"):
             args.wandb_mode = wb.get("mode")
-        if "dir" in wb:
+        if "dir" in wb and not cli_overrides("--wandb-dir"):
             args.wandb_dir = wb.get("dir")
-        if "group" in wb:
+        if "group" in wb and not cli_overrides("--wandb-group"):
             args.wandb_group = wb.get("group")
-        if "job_type" in wb:
+        if "job_type" in wb and not cli_overrides("--wandb-job-type"):
             args.wandb_job_type = wb.get("job_type")
 
     # Auto-generate wandb run_name from model and timestamp if not provided
