@@ -10,7 +10,7 @@ command:
   - ${args}
 method: bayes  # Options: grid, random, bayes (Bayesian optimization is most efficient)
 metric:
-  name: val_acc  # Metric to optimize
+  name: best_val_accuracy  # Metric to optimize
   goal: maximize  # Maximize validation accuracy
 
 parameters:
