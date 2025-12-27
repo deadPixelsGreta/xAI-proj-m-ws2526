@@ -87,12 +87,17 @@ def create_data_loaders(
     )
     val_dataset = datasets.ImageFolder(val_dir, transform=get_val_transform())
 
+    # persistent_workers=True is recommended for training in environments like Colab
+    # to avoid the overhead of re-creating worker processes every epoch.
+    persistent = num_workers > 0
+
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
         pin_memory=pin_memory,
+        persistent_workers=persistent,
     )
 
     val_loader = DataLoader(
@@ -101,6 +106,7 @@ def create_data_loaders(
         shuffle=False,
         num_workers=num_workers,
         pin_memory=pin_memory,
+        persistent_workers=persistent,
     )
 
     return train_loader, val_loader, len(train_dataset.classes)
@@ -147,6 +153,7 @@ def create_test_loader(
         shuffle=False,
         num_workers=num_workers,
         pin_memory=pin_memory,
+        persistent_workers=num_workers > 0,
     )
 
     return test_loader
