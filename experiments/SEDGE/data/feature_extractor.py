@@ -1,10 +1,13 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 
-class ImageFeatureExtractor:
+class ImageFeatureExtractor(nn.Module):
     """Extracts domain-agnostic image degradation features."""
+
+    def __init__(self):
+        super().__init__()
 
     @staticmethod
     def get_blur_feature(img_tensor):
@@ -66,7 +69,7 @@ class ImageFeatureExtractor:
         grad_mag = torch.mean(diff_h, dim=(1, 2, 3)) + torch.mean(diff_v, dim=(1, 2, 3))
         return grad_mag.unsqueeze(1)  # [B, 1]
 
-    def __call__(self, img_tensor):
+    def forward(self, img_tensor):
         """Extracts all features and concatenates them."""
         blur = self.get_blur_feature(img_tensor)
         noise = self.get_noise_feature(img_tensor)
