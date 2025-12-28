@@ -128,6 +128,11 @@ def parse_args():
         "--wandb", action="store_true", help="Enable Weights & Biases logging"
     )
     parser.add_argument(
+        "--no-wandb",
+        action="store_true",
+        help="Disable Weights & Biases logging (overrides YAML config)",
+    )
+    parser.add_argument(
         "--wandb-project", type=str, default="imagenet-subset", help="W&B project name"
     )
     parser.add_argument("--wandb-run-name", type=str, default=None, help="W&B run name")
@@ -205,8 +210,16 @@ def main():
 
         # wandb section
         wb = cfg.get("wandb", {})
-        if "enabled" in wb and not cli_overrides("--wandb"):
+        if "enabled" in wb and not (
+            cli_overrides("--wandb") or cli_overrides("--no-wandb")
+        ):
             args.wandb = bool(wb["enabled"])
+
+        # CLI flag --no-wandb always disables, --wandb always enables
+        if cli_overrides("--no-wandb"):
+            args.wandb = False
+        elif cli_overrides("--wandb"):
+            args.wandb = True
         if "project" in wb and not cli_overrides("--wandb-project"):
             args.wandb_project = str(wb["project"])
         # Optional W&B fields from YAML (no CLI flags defined for these)
