@@ -37,20 +37,14 @@ def create_model(
             model = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1)
         else:
             model = models.resnet34(weights=None)
-        # Rename fc to classifier
-        in_features = model.fc.in_features
-        del model.fc
-        model.classifier = nn.Linear(in_features, num_classes)
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
 
     elif model_name == "resnet50":
         if pretrained:
             model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
         else:
             model = models.resnet50(weights=None)
-        # Rename fc to classifier
-        in_features = model.fc.in_features
-        del model.fc
-        model.classifier = nn.Linear(in_features, num_classes)
+       model.fc = nn.Linear(model.fc.in_features, num_classes)
 
     elif model_name == "efficientnet_b0":
         if pretrained:
