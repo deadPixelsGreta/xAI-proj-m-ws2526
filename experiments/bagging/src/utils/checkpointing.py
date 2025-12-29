@@ -10,6 +10,7 @@ class CheckpointSaver:
         dirpath,
         num_classes,
         model_name,
+        save_name,
         wandb_enabled,
         # config=None,
         top_n=1,
@@ -20,6 +21,7 @@ class CheckpointSaver:
         self.top_n = top_n
         # self.config = dict(config)
         self.model_name = model_name
+        self.save_name = save_name
         self.wandb_enabled = wandb_enabled
         self.early_stop_thresh = early_stop_thresh
         self.early_stop = False
@@ -28,7 +30,7 @@ class CheckpointSaver:
         self.num_classes = num_classes
         
     def __call__(self, model, epoch, val_acc, val_loss, optimizer):
-        model_path = self.dirpath / f"best_{self.model_name}_epoch{epoch}.pth"
+        model_path = self.dirpath / f"best_{self.save_name}_epoch{epoch}.pth"
         if val_acc > self.best_val_acc:
             # logging.info(f"Current metric value better than {metric_val} better than best {self.best_metric_val}, saving model at {model_path}")
             self.best_val_acc = val_acc

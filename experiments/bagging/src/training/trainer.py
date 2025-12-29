@@ -196,6 +196,7 @@ def train(
         dirpath=save_path,
         num_classes=num_classes,
         model_name=model_name,
+        save_name=wandb_config.get("run_name"),
         wandb_enabled=(wandb_enabled and WANDB_AVAILABLE),  # Pass wandb_enabled flag
         top_n=config.get("top_n_checkpoints", 1),
         early_stop_thresh=config.get("early_stopping_thresh", 5),
