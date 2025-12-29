@@ -9,7 +9,7 @@ from torchvision import models
 
 
 # Supported model architectures
-SUPPORTED_MODELS = ["densenet121", "resnet34", "resnet50", "efficientnet_b0"]
+SUPPORTED_MODELS = ["densenet121", "resnet18", "resnet34", "resnet50", "efficientnet_b0"]
 
 
 def create_model(
@@ -31,6 +31,13 @@ def create_model(
             model = models.densenet121(weights=None)
         # DenseNet uses `classifier` which is a linear layer
         model.classifier = nn.Linear(model.classifier.in_features, num_classes)
+
+    elif model_name == "resnet18":
+        if pretrained:
+            model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+        else:
+            model = models.resnet18(weights=None)
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
 
     elif model_name == "resnet34":
         if pretrained:
@@ -83,7 +90,7 @@ def load_checkpoint(
             break
 
     if model_name is None:
-        # If we can't match, default to resnet18 but warn?
+        # If we can't match, default to resnet but warn?
         # For now, just raise the error from create_model if passed raw,
         # or fallback. The traceback showed it passed 'efficientnet_b0_seed0'
         # which means it didn't match cleanly if we just used equality.
