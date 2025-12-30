@@ -17,6 +17,7 @@ def add_common_args(parser: argparse.ArgumentParser):
     # Allow both --checkpoint-dir and --save-dir for compatibility
     parser.add_argument(
         "--checkpoint-dir",
+        "--checkpoint_dir",
         "--save-dir",
         "--save_dir",
         type=str,

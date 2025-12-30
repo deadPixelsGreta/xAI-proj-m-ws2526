@@ -6,7 +6,7 @@ command:
   - ${env}
   - ${interpreter}
   - -m
-  - experiments.base_ensemble.scripts.train
+  - experiments.base_ensemble.scripts.train_single_model
   - ${args}
 method: bayes  # Options: grid, random, bayes (Bayesian optimization is most efficient)
 metric:

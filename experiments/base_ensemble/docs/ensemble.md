@@ -84,13 +84,13 @@ Each model is trained independently with transfer learning.
 
 ```bash
 # Train ResNet18
-python experiments/scripts/train.py --model resnet18 --epochs 5 --wandb
+python experiments/scripts/train_single_model.py --model resnet18 --epochs 5 --wandb
 
 # Train ResNet34
-python experiments/scripts/train.py --model resnet34 --epochs 5 --wandb
+python experiments/scripts/train_single_model.py --model resnet34 --epochs 5 --wandb
 
 # Train EfficientNet-B0
-python experiments/scripts/train.py --model efficientnet_b0 --epochs 5 --wandb
+python experiments/scripts/train_single_model.py --model efficientnet_b0 --epochs 5 --wandb
 ```
 
 ### Training Configuration
@@ -119,16 +119,16 @@ Checkpoints are saved to `checkpoints/` (e.g., `best_resnet18_seed42.pth`).
 
 ```bash
 # Evaluate on the TEST set (Recommended)
-python experiments/scripts/inference.py --evaluate --split test
+python experiments/scripts/ensemble_inference.py --evaluate --split test
 
 # Evaluate on Validation set
-python experiments/scripts/inference.py --evaluate --split val
+python experiments/scripts/ensemble_inference.py --evaluate --split val
 
 # Single image inference
-python experiments/scripts/inference.py --image path/to/image.jpg
+python experiments/scripts/ensemble_inference.py --image path/to/image.jpg
 
 # Batch inference on directory
-python experiments/scripts/inference.py --image-dir custom_images/
+python experiments/scripts/ensemble_inference.py --image-dir custom_images/
 ```
 
 ### Output Example
@@ -164,8 +164,8 @@ project/
 │       │   └── inference/       # Inference logic
 ├── experiments/
 │   ├── scripts/                 # CLI entry points
-│   │   ├── train.py
-│   │   ├── inference.py
+│   │   ├── train_single_model.py
+│   │   ├── ensemble_inference.py
 │   │   └── split_dataset.py     # <--- NEW: Dataset splitter
 │   ├── configs/
 │   │   └── default.yaml
@@ -185,5 +185,5 @@ project/
 Training runs are logged to [Weights & Biases](https://wandb.ai).
 
 ```bash
-python experiments/scripts/train.py --model resnet18 --wandb --wandb-project imagenet-subset-ensemble
+python experiments/scripts/train_single_model.py --model resnet18 --wandb --wandb-project imagenet-subset-ensemble
 ```
