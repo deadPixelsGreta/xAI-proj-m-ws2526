@@ -47,7 +47,7 @@ from experiments.base_ensemble.src.utils.arguments_parsing import (
 )
 from experiments.base_ensemble.src.models import SUPPORTED_MODELS, create_model  # noqa: E402
 from experiments.base_ensemble.src.data import create_data_loaders, get_dataset_info  # noqa: E402
-from experiments.base_ensemble.src.training import train  # noqa: E402
+from experiments.base_ensemble.src.training import train, TrainingConfig  # noqa: E402
 
 
 def parse_args():
@@ -237,7 +237,7 @@ def main():
     print(f"{args.model} ready with {num_classes} output classes")
 
     # Training config
-    config = {
+    config_dict = {
         "epochs": args.epochs,
         "lr": args.lr,
         "momentum": args.momentum,
@@ -253,20 +253,11 @@ def main():
         "scheduler": args.scheduler,
         "label_smoothing": args.label_smoothing,
     }
+    config = TrainingConfig.from_dict(config_dict)
 
-    print("\n Training Configuration:")
-    print(f"   Epochs: {args.epochs}")
-    print(f"   Batch size: {args.batch_size}")
-    print(f"   Learning rate: {args.lr}")
-    print(f"   Momentum: {args.momentum}")
-    print(f"   Weight decay: {args.weight_decay}")
+    # Basic summary info is now handled by the TrainerLogger internal to train()
+    # but we can keep a high-level model print here
     print(f"   Pretrained: {pretrained}")
-    print(f"   Checkpoint directory: {args.checkpoint_dir}")
-    print(f"   Wandb logging: {args.wandb}")
-    print(
-        f"   AMP: {args.amp} | Grad Clip: {args.grad_clip} | Accum Steps: {args.accum_steps}"
-    )
-    print(f"   Scheduler: {args.scheduler} | Label Smoothing: {args.label_smoothing}")
 
     # Wandb config
     wandb_config = {

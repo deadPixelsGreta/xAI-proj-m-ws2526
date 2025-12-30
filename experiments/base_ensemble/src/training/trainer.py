@@ -3,6 +3,7 @@
 import time
 from pathlib import Path
 from typing import Tuple, Dict, Any, Optional
+from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
@@ -18,6 +19,96 @@ try:
     WANDB_AVAILABLE = True
 except ImportError:
     WANDB_AVAILABLE = False
+
+
+@dataclass
+class TrainingConfig:
+    """Configuration for model training."""
+
+    epochs: int = 5
+    lr: float = 0.001
+    momentum: float = 0.9
+    weight_decay: float = 1e-4
+    batch_size: int = 32
+    num_classes: int = 10
+    scheduler: str = "step"
+    scheduler_step_size: int = 7
+    scheduler_gamma: float = 0.1
+    label_smoothing: float = 0.1
+    early_stopping_patience: int = 0
+    use_sota_aug: bool = True
+    amp: bool = False
+    grad_clip: float = 0.0
+    accum_steps: int = 1
+    seed: Optional[int] = None
+
+    @classmethod
+    def from_dict(cls, config_dict: Dict[str, Any]) -> "TrainingConfig":
+        """Create a TrainingConfig from a dictionary, ignoring unknown keys."""
+        import inspect
+
+        valid_keys = inspect.signature(cls).parameters.keys()
+        filtered_dict = {k: v for k, v in config_dict.items() if k in valid_keys}
+        return cls(**filtered_dict)
+
+
+class TrainerLogger:
+    """Unified logger for console and Weights & Biases."""
+
+    def __init__(
+        self,
+        enabled: bool = False,
+        config: Optional[TrainingConfig] = None,
+        model_name: str = "model",
+        wandb_config: Optional[Dict] = None,
+    ):
+        self.enabled = enabled and WANDB_AVAILABLE
+        self.model_name = model_name
+
+        if self.enabled:
+            init_kwargs = {
+                "project": wandb_config.get("project", "imagenet-subset"),
+                "name": wandb_config.get("run_name"),
+                "entity": wandb_config.get("entity"),
+                "tags": wandb_config.get("tags"),
+                "notes": wandb_config.get("notes"),
+                "mode": wandb_config.get("mode"),
+                "dir": wandb_config.get("dir"),
+                "group": wandb_config.get("group"),
+                "job_type": wandb_config.get("job_type"),
+            }
+            init_kwargs = {k: v for k, v in init_kwargs.items() if v is not None}
+
+            wandb.init(
+                **init_kwargs,
+                config={
+                    **(vars(config) if config else {}),
+                    "architecture": model_name,
+                },
+            )
+
+    def watch(self, model: nn.Module):
+        if self.enabled:
+            wandb.watch(model, log="all", log_freq=100)
+
+    def log(self, metrics: Dict[str, Any], step: Optional[int] = None):
+        if self.enabled:
+            wandb.log(metrics, step=step)
+
+    def update_summary(self, metrics: Dict[str, Any]):
+        if self.enabled:
+            for k, v in metrics.items():
+                wandb.run.summary[k] = v
+
+    def finish(self):
+        if self.enabled:
+            wandb.finish()
+
+    def info(self, message: str):
+        print(message)
+
+    def separator(self, char: str = "=", length: int = 60):
+        print(char * length)
 
 
 def train_one_epoch(
@@ -131,7 +222,7 @@ def validate(
     total = 0
 
     with torch.no_grad():
-        pbar = tqdm(val_loader, desc="Validating")
+        pbar = tqdm(val_loader, desc="Validating", leave=False)
         for inputs, targets in pbar:
             inputs, targets = inputs.to(device), targets.to(device)
             outputs = model(inputs)
@@ -152,107 +243,45 @@ def train(
     model: nn.Module,
     train_loader: DataLoader,
     val_loader: DataLoader,
-    config: Dict[str, Any],
+    config: TrainingConfig,
     device: torch.device,
     save_dir: str = "checkpoints",
     model_name: str = "model",
     wandb_enabled: bool = False,
     wandb_config: Optional[Dict] = None,
 ) -> Dict[str, Any]:
-    """Run the full training loop and checkpoint the best/final models.
+    """Run the full training loop and checkpoint the best/final models."""
+    # Initialization
+    logger = TrainerLogger(wandb_enabled, config, model_name, wandb_config)
+    logger.watch(model)
 
-    Config expects keys: epochs, lr, momentum, weight_decay, batch_size, num_classes.
-    Returns a summary dict with best/final metrics and checkpoint paths.
-    """
-    # Setup
-    criterion = nn.CrossEntropyLoss(label_smoothing=config.get("label_smoothing", 0.1))
+    criterion = nn.CrossEntropyLoss(label_smoothing=config.label_smoothing)
     optimizer = optim.SGD(
         model.parameters(),
-        lr=config.get("lr", 0.001),
-        momentum=config.get("momentum", 0.9),
-        weight_decay=config.get("weight_decay", 1e-4),
+        lr=config.lr,
+        momentum=config.momentum,
+        weight_decay=config.weight_decay,
     )
+    scheduler = _setup_scheduler(optimizer, config, len(train_loader))
+    scaler = torch.amp.GradScaler(enabled=config.amp and device.type == "cuda")
 
-    # Configurable LR scheduler
-    scheduler_type = config.get("scheduler", "step").lower()
-    epochs = config.get("epochs", 5)
-
-    if scheduler_type == "cosine":
-        scheduler = CosineAnnealingLR(optimizer, T_max=epochs)
-    elif scheduler_type == "onecycle":
-        scheduler = OneCycleLR(
-            optimizer,
-            max_lr=config.get("lr", 0.001),
-            epochs=epochs,
-            steps_per_epoch=len(train_loader),
-        )
-    else:  # Default to StepLR
-        scheduler = StepLR(
-            optimizer,
-            step_size=config.get("scheduler_step_size", 7),
-            gamma=config.get("scheduler_gamma", 0.1),
-        )
-
-    # Create save directory
     save_path = Path(save_dir)
     save_path.mkdir(exist_ok=True)
 
-    # Initialize wandb if enabled
-    if wandb_enabled and WANDB_AVAILABLE:
-        init_kwargs = {
-            "project": wandb_config.get("project", "imagenet-subset"),
-            "name": wandb_config.get("run_name"),
-            "entity": wandb_config.get("entity"),
-            "tags": wandb_config.get("tags"),
-            "notes": wandb_config.get("notes"),
-            "mode": wandb_config.get("mode"),
-            "dir": wandb_config.get("dir"),
-            "group": wandb_config.get("group"),
-            "job_type": wandb_config.get("job_type"),
-        }
-        init_kwargs = {k: v for k, v in init_kwargs.items() if v is not None}
-
-        wandb.init(
-            **init_kwargs,
-            config={
-                **config,
-                "architecture": model_name,
-            },
-        )
-        wandb.watch(model, log="all", log_freq=100)
-
-    # AMP Scaler
-    scaler = torch.amp.GradScaler(
-        enabled=config.get("amp", False) and device.type == "cuda"
-    )
-    accum_steps = config.get("accum_steps", 1)
-    grad_clip = config.get("grad_clip", 0.0)
-
-    # Training loop
-    epochs = config.get("epochs", 5)
     best_val_acc = 0.0
-    num_classes = config.get("num_classes", 10)
-
-    # Early stopping configuration
-    early_stopping_patience = config.get("early_stopping_patience", 0)  # 0 = disabled
     epochs_without_improvement = 0
 
-    print("\n" + "=" * 60)
-    print("Starting Training")
-    print("=" * 60)
+    logger.separator()
+    logger.info(f"Starting Training: {model_name}")
+    logger.separator()
 
-    # Setup SOTA batch-level augmentations
-    mixup_cutmix = None
-    if config.get("use_sota_aug", True):
-        mixup = v2.MixUp(num_classes=num_classes, alpha=1.0)
-        cutmix = v2.CutMix(num_classes=num_classes, alpha=1.0)
-        mixup_cutmix = v2.RandomChoice([mixup, cutmix])
+    mixup_cutmix = _setup_augmentations(config)
 
-    for epoch in range(epochs):
-        print(f"\nEpoch {epoch + 1}/{epochs}")
-        print("-" * 40)
+    for epoch in range(config.epochs):
+        logger.info(f"\nEpoch {epoch + 1}/{config.epochs}")
+        logger.separator("-", 40)
 
-        # Train
+        # Train & Validate
         train_loss, train_acc, epoch_time, grad_norm = train_one_epoch(
             model,
             train_loader,
@@ -262,116 +291,84 @@ def train(
             epoch,
             mixup_cutmix=mixup_cutmix,
             scaler=scaler,
-            accum_steps=accum_steps,
-            grad_clip=grad_clip,
+            accum_steps=config.accum_steps,
+            grad_clip=config.grad_clip,
             scheduler=scheduler,
         )
-
-        # Validate
         val_loss, val_acc = validate(model, val_loader, criterion, device)
 
-        # Update learning rate (OneCycleLR steps per batch inside train_one_epoch if needed,
-        # but here we follow standard per-epoch stepping for simplicity unless using OneCycle)
-        if scheduler_type != "onecycle":
+        if config.scheduler != "onecycle":
             scheduler.step()
 
-        # Print epoch summary
-        print("\n   Epoch Summary:")
-        print(f"   Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}%")
-        print(f"   Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}%")
-        print(f"   Time: {epoch_time:.1f}s | LR: {scheduler.get_last_lr()[0]:.6f}")
+        # Logging & Checkpointing
+        _log_epoch_summary(
+            logger,
+            epoch,
+            train_loss,
+            train_acc,
+            val_loss,
+            val_acc,
+            epoch_time,
+            scheduler,
+            grad_norm,
+            len(train_loader.dataset),
+        )
 
-        # Log to wandb
-        if wandb_enabled and WANDB_AVAILABLE:
-            # Compute additional metrics
-            generalization_gap = train_acc - val_acc  # Positive = overfitting
-            throughput = len(train_loader.dataset) / epoch_time  # samples/sec
-
-            wandb.log(
-                {
-                    "epoch": epoch + 1,
-                    "train/loss": train_loss,
-                    "train/accuracy": train_acc,
-                    "val/loss": val_loss,
-                    "val/accuracy": val_acc,
-                    "learning_rate": scheduler.get_last_lr()[0],
-                    "epoch_time": epoch_time,
-                    # New metrics
-                    "metrics/generalization_gap": generalization_gap,
-                    "metrics/grad_norm": grad_norm,
-                    "metrics/throughput": throughput,
-                    "metrics/loss_gap": val_loss - train_loss,
-                },
-                step=epoch + 1,
-            )
-
-        # Save best model
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            epochs_without_improvement = 0  # Reset counter
-            checkpoint_path = save_path / f"best_{model_name}.pth"
-            torch.save(
-                {
-                    "epoch": epoch,
-                    "model_name": model_name,
-                    "model_state_dict": model.state_dict(),
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "val_acc": val_acc,
-                    "val_loss": val_loss,
-                    "num_classes": num_classes,
-                },
-                checkpoint_path,
+            epochs_without_improvement = 0
+            _save_checkpoint(
+                model,
+                optimizer,
+                epoch,
+                val_acc,
+                val_loss,
+                config.num_classes,
+                model_name,
+                save_path / f"best_{model_name}.pth",
             )
-            print(f"   New best model saved! (Val Acc: {val_acc:.2f}%)")
-
-            if wandb_enabled and WANDB_AVAILABLE:
-                wandb.run.summary["best_val_accuracy"] = val_acc
-                wandb.run.summary["best_epoch"] = epoch + 1
+            logger.info(f"   New best model saved! (Val Acc: {val_acc:.2f}%)")
+            logger.update_summary(
+                {"best_val_accuracy": val_acc, "best_epoch": epoch + 1}
+            )
         else:
             epochs_without_improvement += 1
 
-        # Early stopping check
         if (
-            early_stopping_patience > 0
-            and epochs_without_improvement >= early_stopping_patience
+            config.early_stopping_patience > 0
+            and epochs_without_improvement >= config.early_stopping_patience
         ):
-            print(
-                f"\n   Early stopping triggered after {epochs_without_improvement} epochs without improvement."
+            logger.info(
+                f"\nEarly stopping triggered after {epochs_without_improvement} epochs."
             )
-            if wandb_enabled and WANDB_AVAILABLE:
-                wandb.run.summary["early_stopped"] = True
-                wandb.run.summary["stopped_at_epoch"] = epoch + 1
+            logger.update_summary(
+                {"early_stopped": True, "stopped_at_epoch": epoch + 1}
+            )
             break
 
-    # Save final model
+    # Wrap up
     final_path = save_path / f"final_{model_name}.pth"
-    torch.save(
-        {
-            "epoch": epochs,
-            "model_name": model_name,
-            "model_state_dict": model.state_dict(),
-            "optimizer_state_dict": optimizer.state_dict(),
-            "val_acc": val_acc,
-            "val_loss": val_loss,
-            "num_classes": num_classes,
-        },
+    _save_checkpoint(
+        model,
+        optimizer,
+        config.epochs,
+        val_acc,
+        val_loss,
+        config.num_classes,
+        model_name,
         final_path,
     )
+    logger.update_summary(
+        {"final_val_accuracy": val_acc, "final_train_accuracy": train_acc}
+    )
+    logger.finish()
 
-    # Finish wandb with explicit summary
-    if wandb_enabled and WANDB_AVAILABLE:
-        # Set explicit summary metrics to ensure correct values in sweep table
-        wandb.run.summary["best_val_accuracy"] = best_val_acc
-        wandb.run.summary["final_val_accuracy"] = val_acc
-        wandb.run.summary["final_train_accuracy"] = train_acc
-        wandb.finish()
-
-    print("\n" + "=" * 60)
-    print("Training Complete!")
-    print("=" * 60)
-    print(f"   Best Validation Accuracy: {best_val_acc:.2f}%")
-    print(f"   Best model: {save_path / f'best_{model_name}.pth'}")
-    print(f"   Final model: {final_path}")
+    logger.separator()
+    logger.info("Training Complete!")
+    logger.info(
+        f"   Best Val Acc: {best_val_acc:.2f}% | Best: {save_path / f'best_{model_name}.pth'}"
+    )
+    logger.separator()
 
     return {
         "best_val_acc": best_val_acc,
@@ -379,3 +376,81 @@ def train(
         "best_checkpoint": str(save_path / f"best_{model_name}.pth"),
         "final_checkpoint": str(final_path),
     }
+
+
+def _setup_scheduler(
+    optimizer: optim.Optimizer, config: TrainingConfig, steps_per_epoch: int
+):
+    if config.scheduler == "cosine":
+        return CosineAnnealingLR(optimizer, T_max=config.epochs)
+    elif config.scheduler == "onecycle":
+        return OneCycleLR(
+            optimizer,
+            max_lr=config.lr,
+            epochs=config.epochs,
+            steps_per_epoch=steps_per_epoch,
+        )
+    return StepLR(
+        optimizer, step_size=config.scheduler_step_size, gamma=config.scheduler_gamma
+    )
+
+
+def _setup_augmentations(config: TrainingConfig):
+    if not config.use_sota_aug:
+        return None
+    mixup = v2.MixUp(num_classes=config.num_classes, alpha=1.0)
+    cutmix = v2.CutMix(num_classes=config.num_classes, alpha=1.0)
+    return v2.RandomChoice([mixup, cutmix])
+
+
+def _save_checkpoint(
+    model, optimizer, epoch, val_acc, val_loss, num_classes, model_name, path
+):
+    torch.save(
+        {
+            "epoch": epoch,
+            "model_name": model_name,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "val_acc": val_acc,
+            "val_loss": val_loss,
+            "num_classes": num_classes,
+        },
+        path,
+    )
+
+
+def _log_epoch_summary(
+    logger,
+    epoch,
+    t_loss,
+    t_acc,
+    v_loss,
+    v_acc,
+    time,
+    scheduler,
+    grad_norm,
+    dataset_size,
+):
+    lr = scheduler.get_last_lr()[0]
+    logger.info("\n   Epoch Summary:")
+    logger.info(f"   Train Loss: {t_loss:.4f} | Train Acc: {t_acc:.2f}%")
+    logger.info(f"   Val Loss: {v_loss:.4f} | Val Acc: {v_acc:.2f}%")
+    logger.info(f"   Time: {time:.1f}s | LR: {lr:.6f}")
+
+    logger.log(
+        {
+            "epoch": epoch + 1,
+            "train/loss": t_loss,
+            "train/accuracy": t_acc,
+            "val/loss": v_loss,
+            "val/accuracy": v_acc,
+            "learning_rate": lr,
+            "epoch_time": time,
+            "metrics/generalization_gap": t_acc - v_acc,
+            "metrics/grad_norm": grad_norm,
+            "metrics/throughput": dataset_size / time,
+            "metrics/loss_gap": v_loss - t_loss,
+        },
+        step=epoch + 1,
+    )
