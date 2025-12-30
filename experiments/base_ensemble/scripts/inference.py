@@ -67,11 +67,13 @@ def parse_args():
     )
     parser.add_argument(
         "--show-individual",
+        "--show_individual",
         action="store_true",
         help="Show individual model predictions",
     )
     parser.add_argument(
         "--no-diagnostics",
+        "--no_diagnostics",
         action="store_true",
         help="Hide ensemble diagnostic metrics (disagreement, agreement ratio)",
     )
