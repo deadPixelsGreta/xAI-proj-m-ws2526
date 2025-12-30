@@ -50,7 +50,7 @@ def parse_args():
     parser.add_argument(
         "--data-dir",
         type=str,
-        default="ImageNetSubset",
+        default="datasets",
         help="Dataset directory (for --evaluate mode)",
     )
 
