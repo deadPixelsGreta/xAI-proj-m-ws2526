@@ -22,8 +22,8 @@ from experiments.base_ensemble.src.utils.arguments_parsing import (
 )
 from experiments.base_ensemble.src.models import load_checkpoint
 from experiments.base_ensemble.src.data import CLASS_NAMES, get_val_transform
-from experiments.base_ensemble.src.inference import run_inference
-from experiments.base_ensemble.src.inference.ensemble import (
+from experiments.base_ensemble.src.ensembling import run_inference
+from experiments.base_ensemble.src.ensembling.inference import (
     find_default_checkpoints,
     ensemble_predict_extended,
     load_image,

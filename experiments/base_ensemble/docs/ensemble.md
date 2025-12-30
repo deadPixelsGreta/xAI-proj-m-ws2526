@@ -161,7 +161,7 @@ project/
 │       │   ├── models/          # Model architectures
 │       │   ├── data/            # Data loading
 │       │   ├── training/        # Training logic
-│       │   └── inference/       # Inference logic
+│       │   └── ensembling/      # Ensemble inference logic
 ├── experiments/
 │   ├── scripts/                 # CLI entry points
 │   │   ├── train_single_model.py
