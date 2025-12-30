@@ -99,7 +99,7 @@ def evaluate_ensemble(
     device,
     checkpoint_dir=None,
     split="val",
-    wandb_enabled=False,
+    wandb_enabled=True,
     wandb_project=None,
 ):
     """Evaluate ensemble on entire validation or test set with optional W&B logging."""
