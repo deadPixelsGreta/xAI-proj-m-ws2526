@@ -7,7 +7,7 @@ from typing import Tuple, Dict, Any, Optional
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
+from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR, OneCycleLR
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2
 from tqdm import tqdm
@@ -29,6 +29,10 @@ def train_one_epoch(
     epoch: int,
     print_freq: int = 50,
     mixup_cutmix: Optional[Any] = None,
+    scaler: Optional[torch.amp.GradScaler] = None,
+    accum_steps: int = 1,
+    grad_clip: float = 0.0,
+    scheduler: Optional[Any] = None,
 ) -> Tuple[float, float, float, float]:
     """Train for one epoch and return (loss, accuracy, seconds, grad_norm)."""
     model.train()
@@ -49,21 +53,49 @@ def train_one_epoch(
         if mixup_cutmix:
             inputs, targets = mixup_cutmix(inputs, targets)
 
-        optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, targets)
-        loss.backward()
+        # Use AMP if scaler is provided
+        with torch.amp.autocast(device_type=device.type, enabled=scaler is not None):
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+            # Normalize loss for accumulation steps
+            loss = loss / accum_steps
 
-        # Compute gradient norm before optimizer step (for monitoring)
-        total_norm = 0.0
-        for p in model.parameters():
-            if p.grad is not None:
-                total_norm += p.grad.data.norm(2).item() ** 2
-        grad_norm = total_norm**0.5
+        # Backward pass
+        if scaler is not None:
+            scaler.scale(loss).backward()
+        else:
+            loss.backward()
 
-        optimizer.step()
+        # Step optimizer and update gradients after accumulation
+        if (batch_idx + 1) % accum_steps == 0 or (batch_idx + 1) == len(train_loader):
+            # Compute gradient norm before clipping (for monitoring)
+            total_norm = 0.0
+            for p in model.parameters():
+                if p.grad is not None:
+                    total_norm += p.grad.data.norm(2).item() ** 2
+            grad_norm = total_norm**0.5
 
-        running_loss += loss.item()
+            # Unscale and Clip gradients
+            if scaler is not None:
+                scaler.unscale_(optimizer)
+
+            if grad_clip > 0:
+                nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+
+            # Optimizer step
+            if scaler is not None:
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                optimizer.step()
+
+            optimizer.zero_grad()
+
+            # Step scheduler per-batch if it's OneCycleLR
+            if scheduler is not None and isinstance(scheduler, OneCycleLR):
+                scheduler.step()
+
+        running_loss += loss.item() * accum_steps
 
         # For accuracy, use the argmax of the target if it's been mixed (soft labels)
         if mixup_cutmix:
@@ -133,7 +165,7 @@ def train(
     Returns a summary dict with best/final metrics and checkpoint paths.
     """
     # Setup
-    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    criterion = nn.CrossEntropyLoss(label_smoothing=config.get("label_smoothing", 0.1))
     optimizer = optim.SGD(
         model.parameters(),
         lr=config.get("lr", 0.001),
@@ -143,8 +175,17 @@ def train(
 
     # Configurable LR scheduler
     scheduler_type = config.get("scheduler", "step").lower()
+    epochs = config.get("epochs", 5)
+
     if scheduler_type == "cosine":
-        scheduler = CosineAnnealingLR(optimizer, T_max=config.get("epochs", 5))
+        scheduler = CosineAnnealingLR(optimizer, T_max=epochs)
+    elif scheduler_type == "onecycle":
+        scheduler = OneCycleLR(
+            optimizer,
+            max_lr=config.get("lr", 0.001),
+            epochs=epochs,
+            steps_per_epoch=len(train_loader),
+        )
     else:  # Default to StepLR
         scheduler = StepLR(
             optimizer,
@@ -180,6 +221,13 @@ def train(
         )
         wandb.watch(model, log="all", log_freq=100)
 
+    # AMP Scaler
+    scaler = torch.amp.GradScaler(
+        enabled=config.get("amp", False) and device.type == "cuda"
+    )
+    accum_steps = config.get("accum_steps", 1)
+    grad_clip = config.get("grad_clip", 0.0)
+
     # Training loop
     epochs = config.get("epochs", 5)
     best_val_acc = 0.0
@@ -213,13 +261,19 @@ def train(
             device,
             epoch,
             mixup_cutmix=mixup_cutmix,
+            scaler=scaler,
+            accum_steps=accum_steps,
+            grad_clip=grad_clip,
+            scheduler=scheduler,
         )
 
         # Validate
         val_loss, val_acc = validate(model, val_loader, criterion, device)
 
-        # Update learning rate
-        scheduler.step()
+        # Update learning rate (OneCycleLR steps per batch inside train_one_epoch if needed,
+        # but here we follow standard per-epoch stepping for simplicity unless using OneCycle)
+        if scheduler_type != "onecycle":
+            scheduler.step()
 
         # Print epoch summary
         print("\n   Epoch Summary:")

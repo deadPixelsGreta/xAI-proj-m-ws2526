@@ -24,6 +24,12 @@ def add_common_args(parser: argparse.ArgumentParser):
         help="Directory for loading/saving model checkpoints",
         dest="checkpoint_dir",
     )
+    parser.add_argument(
+        "--label-smoothing",
+        type=float,
+        default=0.1,
+        help="Label smoothing value (0.0 to 1.0)",
+    )
 
 
 def add_wandb_args(
@@ -125,4 +131,32 @@ def add_model_args(parser: argparse.ArgumentParser, supported_models: list):
         "--no-pretrained",
         action="store_true",
         help="Train/Load models from scratch without pretrained weights",
+    )
+
+    # Optimization arguments
+    parser.add_argument(
+        "--amp", action="store_true", help="Use Automatic Mixed Precision (AMP)"
+    )
+    parser.add_argument(
+        "--grad-clip",
+        "--grad_clip",
+        type=float,
+        default=0.0,
+        help="Gradient clipping norm (0.0 to disable)",
+        dest="grad_clip",
+    )
+    parser.add_argument(
+        "--accum-steps",
+        "--accum_steps",
+        type=int,
+        default=1,
+        help="Number of gradient accumulation steps",
+        dest="accum_steps",
+    )
+    parser.add_argument(
+        "--scheduler",
+        type=str,
+        default="step",
+        choices=["step", "cosine", "onecycle"],
+        help="Learning rate scheduler type",
     )

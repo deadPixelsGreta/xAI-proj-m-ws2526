@@ -247,6 +247,11 @@ def main():
         "use_sota_aug": not args.no_sota,
         "seed": args.seed,  # Log seed to WandB for reproducibility tracking
         "early_stopping_patience": args.early_stopping_patience,
+        "amp": args.amp,
+        "grad_clip": args.grad_clip,
+        "accum_steps": args.accum_steps,
+        "scheduler": args.scheduler,
+        "label_smoothing": args.label_smoothing,
     }
 
     print("\n Training Configuration:")
@@ -258,6 +263,10 @@ def main():
     print(f"   Pretrained: {pretrained}")
     print(f"   Checkpoint directory: {args.checkpoint_dir}")
     print(f"   Wandb logging: {args.wandb}")
+    print(
+        f"   AMP: {args.amp} | Grad Clip: {args.grad_clip} | Accum Steps: {args.accum_steps}"
+    )
+    print(f"   Scheduler: {args.scheduler} | Label Smoothing: {args.label_smoothing}")
 
     # Wandb config
     wandb_config = {
