@@ -6,7 +6,7 @@ training:
   learning_rate: 0.001
   momentum: 0.9
   weight_decay: 0.0001
-  num_workers: 0
+  num_workers: 2
   seed: null                    # Random seed for reproducibility (null = random)
   scheduler: step               # LR scheduler: 'step' or 'cosine'
   scheduler_step_size: 7        # For step scheduler: decay LR every N epochs
