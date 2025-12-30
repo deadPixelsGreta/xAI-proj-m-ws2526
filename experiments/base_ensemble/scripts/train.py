@@ -40,6 +40,11 @@ except ImportError:  # pragma: no cover
 
 from experiments.base_ensemble.src.utils.device import get_device, set_seed  # noqa: E402
 from experiments.base_ensemble.src.utils.device import get_device_name  # noqa: E402
+from experiments.base_ensemble.src.utils.arguments_parsing import (
+    add_common_args,
+    add_wandb_args,
+    add_model_args,
+)
 from experiments.base_ensemble.src.models import SUPPORTED_MODELS, create_model  # noqa: E402
 from experiments.base_ensemble.src.data import create_data_loaders, get_dataset_info  # noqa: E402
 from experiments.base_ensemble.src.training import train  # noqa: E402
@@ -59,27 +64,11 @@ def parse_args():
         help="Path to YAML config file (values can be overridden by CLI flags)",
     )
 
-    # Model arguments
-    parser.add_argument(
-        "--model",
-        type=str,
-        default="densenet121",
-        choices=SUPPORTED_MODELS,
-        help="Model architecture",
-    )
-    parser.add_argument(
-        "--no-pretrained",
-        action="store_true",
-        help="Train from scratch without pretrained weights",
-    )
+    # Common arguments (data-dir, checkpoint-dir/save-dir)
+    add_common_args(parser)
 
-    # Data arguments
-    parser.add_argument(
-        "--data-dir",
-        type=str,
-        default="ImageNetSubset",
-        help="Path to dataset directory",
-    )
+    # Model arguments
+    add_model_args(parser, SUPPORTED_MODELS)
     parser.add_argument(
         "--batch-size",
         "--batch_size",
@@ -115,42 +104,8 @@ def parse_args():
         help="Disable SOTA data augmentation (TrivialAugmentWide, Mixup, Cutmix)",
     )
 
-    # Output arguments
-    parser.add_argument(
-        "--save-dir",
-        type=str,
-        default=str(Path(__file__).resolve().parent.parent / "checkpoints"),
-        help="Directory to save checkpoints",
-    )
-
     # Wandb arguments
-    parser.add_argument(
-        "--wandb", action="store_true", help="Enable Weights & Biases logging"
-    )
-    parser.add_argument(
-        "--no-wandb",
-        action="store_true",
-        help="Disable Weights & Biases logging (overrides YAML config)",
-    )
-    parser.add_argument(
-        "--wandb-project", type=str, default="imagenet-subset", help="W&B project name"
-    )
-    parser.add_argument("--wandb-run-name", type=str, default=None, help="W&B run name")
-    parser.add_argument("--wandb-job-type", type=str, default=None, help="W&B job type")
-    parser.add_argument("--wandb-entity", type=str, default=None, help="W&B entity")
-    parser.add_argument("--wandb-tags", nargs="+", default=None, help="W&B tags")
-    parser.add_argument("--wandb-notes", type=str, default=None, help="W&B notes")
-    parser.add_argument(
-        "--wandb-mode",
-        type=str,
-        default=None,
-        help="W&B mode (online/offline/disabled)",
-    )
-    parser.add_argument(
-        "--wandb-dir", type=str, default=None, help="W&B save directory"
-    )
-    parser.add_argument("--wandb-group", type=str, default=None, help="W&B group name")
-
+    add_wandb_args(parser)
     return parser.parse_args()
 
 
@@ -205,8 +160,10 @@ def main():
 
         # paths section
         pd = cfg.get("paths", {})
-        if "checkpoint_dir" in pd and not cli_overrides("--save-dir"):
-            args.save_dir = str(pd["checkpoint_dir"])
+        if "checkpoint_dir" in pd and not (
+            cli_overrides("--checkpoint-dir") or cli_overrides("--save-dir")
+        ):
+            args.checkpoint_dir = str(pd["checkpoint_dir"])
 
         # wandb section
         wb = cfg.get("wandb", {})
@@ -299,7 +256,7 @@ def main():
     print(f"   Momentum: {args.momentum}")
     print(f"   Weight decay: {args.weight_decay}")
     print(f"   Pretrained: {pretrained}")
-    print(f"   Save directory: {args.save_dir}")
+    print(f"   Checkpoint directory: {args.checkpoint_dir}")
     print(f"   Wandb logging: {args.wandb}")
 
     # Wandb config
@@ -327,7 +284,7 @@ def main():
         val_loader=val_loader,
         config=config,
         device=device,
-        save_dir=args.save_dir,
+        save_dir=args.checkpoint_dir,
         model_name=model_save_name,
         wandb_enabled=args.wandb,
         wandb_config=wandb_config,

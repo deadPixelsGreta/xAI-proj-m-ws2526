@@ -16,6 +16,10 @@ except ImportError:
 
 from experiments.base_ensemble.src.utils import get_device
 from experiments.base_ensemble.src.utils.device import get_device_name
+from experiments.base_ensemble.src.utils.arguments_parsing import (
+    add_common_args,
+    add_wandb_args,
+)
 from experiments.base_ensemble.src.models import load_checkpoint
 from experiments.base_ensemble.src.data import CLASS_NAMES, get_val_transform
 from experiments.base_ensemble.src.inference import run_inference
@@ -32,12 +36,16 @@ def parse_args():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
+    # Common arguments (data-dir, checkpoint-dir)
+    add_common_args(parser)
+
     # Input arguments
     parser.add_argument(
         "--image", type=str, default=None, help="Path to a single image for inference"
     )
     parser.add_argument(
         "--image-dir",
+        "--image_dir",
         type=str,
         default=None,
         help="Path to directory of images for batch inference",
@@ -47,22 +55,10 @@ def parse_args():
         action="store_true",
         help="Evaluate ensemble on entire validation set",
     )
-    parser.add_argument(
-        "--data-dir",
-        type=str,
-        default="datasets",
-        help="Dataset directory (for --evaluate mode)",
-    )
 
     # Model arguments
     parser.add_argument(
         "--checkpoints", nargs="+", default=None, help="Paths to model checkpoint files"
-    )
-    parser.add_argument(
-        "--checkpoint-dir",
-        type=str,
-        default=str(Path(__file__).resolve().parent.parent / "checkpoints"),
-        help="Directory to search for default checkpoints",
     )
 
     # Output arguments
@@ -81,17 +77,7 @@ def parse_args():
     )
 
     # Wandb arguments
-    parser.add_argument(
-        "--wandb",
-        action="store_true",
-        help="Enable Weights & Biases logging for evaluation",
-    )
-    parser.add_argument(
-        "--wandb-project",
-        type=str,
-        default="imagenet-subset-ensemble",
-        help="W&B project name for ensemble evaluation",
-    )
+    add_wandb_args(parser, default_project="imagenet-subset-ensemble")
 
     parser.add_argument(
         "--split",
