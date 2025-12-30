@@ -109,6 +109,7 @@ def evaluate_ensemble(
     model_names,
     data_dir,
     device,
+    checkpoint_dir=None,
     split="val",
     wandb_enabled=False,
     wandb_project=None,
@@ -116,6 +117,7 @@ def evaluate_ensemble(
     """Evaluate ensemble on entire validation or test set with optional W&B logging."""
     eval_dir = Path(data_dir) / split
     transform = get_val_transform()  # Same transform for val and test
+    checkpoint_dir = Path(checkpoint_dir) if checkpoint_dir else Path("checkpoints")
 
     print("\n" + "=" * 60)
     print(f"Ensemble Evaluation on {split.capitalize()} Set")
@@ -212,12 +214,32 @@ def evaluate_ensemble(
     print("-" * 50)
     for name in model_names:
         # Get individual model accuracy from checkpoint
-        checkpoint_path = Path("checkpoints") / f"best_{name}.pth"
+        # Handle seed variants by looking for the exact file name if possible,
+        # but here we try to find the match within the provided checkpoint_dir
+        pattern = f"best_{name}.pth"
+        checkpoint_path = checkpoint_dir / pattern
+
         if checkpoint_path.exists():
             ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
             individual_acc = ckpt.get("val_acc", 0)
             individual_accs[name] = individual_acc
             print(f"   {name:25s} {individual_acc:.2f}%")
+        else:
+            # Fallback for seed-specific filenames if exact match not found
+            alt_paths = list(checkpoint_dir.glob(f"best_{name}_seed*.pth"))
+            if alt_paths:
+                checkpoint_path = alt_paths[0]
+                ckpt = torch.load(
+                    checkpoint_path, map_location=device, weights_only=False
+                )
+                individual_acc = ckpt.get("val_acc", 0)
+                individual_accs[name] = individual_acc
+                print(
+                    f"   {name:25s} {individual_acc:.2f}% (from {checkpoint_path.name})"
+                )
+            else:
+                print(f"   {name:25s} [Accuracy not found in {checkpoint_dir}]")
+
     print(f"   {'ENSEMBLE':25s} {overall_acc:.2f}% *")
 
     # Log to W&B
@@ -264,13 +286,16 @@ def evaluate_ensemble(
             }
         )
 
-        # Summary
-        wandb.run.summary["ensemble_accuracy"] = overall_acc
-        wandb.run.summary["avg_disagreement"] = avg_disagreement
-        wandb.run.summary["avg_agreement_ratio"] = avg_agreement
-        wandb.run.summary["improvement_over_best_single"] = (
-            overall_acc - max(individual_accs.values()) if individual_accs else 0
-        )
+        # Summary metrics for quick view in run list
+        wandb.run.summary["ensemble/accuracy"] = overall_acc
+        wandb.run.summary["ensemble/avg_disagreement"] = avg_disagreement
+        wandb.run.summary["ensemble/avg_agreement_ratio"] = avg_agreement * 100
+
+        if individual_accs:
+            best_single = max(individual_accs.values())
+            improvement = overall_acc - best_single
+            wandb.run.summary["ensemble/improvement_over_best_single"] = improvement
+            wandb.run.summary["ensemble/best_single_accuracy"] = best_single
 
         wandb.finish()
         print("\n   W&B logging complete!")
@@ -324,6 +349,7 @@ def main():
             model_names,
             args.data_dir,
             device,
+            checkpoint_dir=args.checkpoint_dir,
             split=args.split,
             wandb_enabled=args.wandb,
             wandb_project=args.wandb_project,
