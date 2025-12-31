@@ -47,6 +47,11 @@ class SEDGETrainer:
         )
         self.group_step_size = config.get("group_step_size", 0.01)
 
+        # Early stopping
+        self.early_stopping_patience = config.get("early_stopping_patience", 5)
+        self.best_val_acc = 0.0
+        self.epochs_without_improvement = 0
+
     def compute_entropy_reg(self, weights: torch.Tensor):
         """Computes entropy regularization to prevent collapse."""
         # weights: [B, num_backbones]
@@ -129,5 +134,24 @@ class SEDGETrainer:
             train_loss, train_acc = self.train_one_epoch(epoch)
             val_loss, val_acc = self.validate()
             print(
-                f"Epoch {epoch + 1}: Train Loss {train_loss:.4f} Acc {train_acc:.2f} | Val Loss {val_loss:.4f} Acc {val_acc:.2f}"
+                f"Epoch {epoch + 1}: Train Loss {train_loss:.4f} Acc {train_acc:.2f}% | Val Loss {val_loss:.4f} Acc {val_acc:.2f}%"
             )
+
+            # Early stopping check
+            if val_acc > self.best_val_acc:
+                self.best_val_acc = val_acc
+                self.epochs_without_improvement = 0
+                print(f"   ✓ New best validation accuracy: {val_acc:.2f}%")
+            else:
+                self.epochs_without_improvement += 1
+                if (
+                    self.early_stopping_patience > 0
+                    and self.epochs_without_improvement >= self.early_stopping_patience
+                ):
+                    print(
+                        f"\n⚠️ Early stopping triggered after {self.early_stopping_patience} epochs without improvement."
+                    )
+                    print(f"   Best validation accuracy: {self.best_val_acc:.2f}%")
+                    break
+
+        return self.best_val_acc
