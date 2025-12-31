@@ -90,11 +90,21 @@ def main():
         backbones.append(model)
 
     # 2. Create SEDGE model
-    feature_extractor = ImageFeatureExtractor()
-    sedge_model = SEDGEModel(backbones, num_classes, feature_extractor).to(device)
+    # Extract model config
+    model_conf = cfg.get("model", {})
+    router_dims = model_conf.get("router_hidden_dims", [64, 32])
+    top_k = model_conf.get("top_k", 0)
 
-    # 3. Create data loaders with robust transforms
-    # We want training to see broadened corruptions
+    feature_extractor = ImageFeatureExtractor()
+    sedge_model = SEDGEModel(
+        backbones,
+        num_classes,
+        feature_extractor,
+        router_hidden_dims=router_dims,
+        top_k=top_k,
+    ).to(device)
+
+    # 3. Create data loaders
     train_loader, val_loader, _ = create_data_loaders(
         args.data_dir,
         batch_size=args.batch_size,
@@ -102,15 +112,10 @@ def main():
         pin_memory=args.pin_memory,
     )
 
-    # Wrap train_loader's dataset transform with robustness
-    # This is a bit hacky depending on how create_data_loaders is implemented
-    # Ideally we'd pass the robust transform to create_data_loaders.
-    # For now, let's assume the user handles the data dir setup.
-
     # 4. Train
     # Merge config for trainer: Start with YAML training section
     trainer_config = cfg.get("training", {})
-    # Ensure CLI/Arg overrides (lr, epochs, etc) take precedence or reflect the update
+    # Ensure CLI/Arg overrides (lr, epochs, etc) take precedence
     trainer_config.update(
         {
             "lr": float(args.lr),

@@ -29,14 +29,22 @@ class SEDGETrainer:
 
         self.criterion = nn.CrossEntropyLoss(reduction="none")  # None for GroupDRO
         self.entropy_reg_weight = config.get("entropy_reg_weight", 0.01)
-        self.use_group_dro = config.get("use_group_dro", True)
+        self.use_group_dro = config.get("use_group_dro", False)
 
         # For GroupDRO: keep track of group losses and weights
-        # Groups: simplified to (Clean, JPEG, Blur, Noise, etc.)
-        self.group_counts = torch.ones(
-            5, device=device
-        )  # [Clean, JPEG, Blur, Noise, Other]
-        self.group_weights = torch.ones(5, device=device) / 5.0
+        # If enabled, we need to know the number of groups.
+        # Ideally this comes from the dataset or config.
+        # Fallback to a safe default if not specified, or disable.
+        # User config has list of corruptions, length of that list is num_groups.
+        # But for now, let's play safe and check if explicit group count is given.
+        self.num_groups = config.get(
+            "num_groups", 5
+        )  # Default to 5 (Clean + 4 corruptions or just 5)
+
+        self.group_counts = torch.ones(self.num_groups, device=device)
+        self.group_weights = torch.ones(self.num_groups, device=device) / float(
+            self.num_groups
+        )
         self.group_step_size = config.get("group_step_size", 0.01)
 
     def compute_entropy_reg(self, weights: torch.Tensor):
