@@ -124,22 +124,28 @@ def main():
         with open(config_path, "r") as f:
             cfg = yaml.safe_load(f) or {}
 
-        def cli_overrides(opt: str) -> bool:
-            return any(arg == opt or arg.startswith(f"{opt}=") for arg in sys.argv)
+        def cli_overrides(*opts: str) -> bool:
+            """Check if any of the given CLI options were provided."""
+            for opt in opts:
+                if any(arg == opt or arg.startswith(f"{opt}=") for arg in sys.argv):
+                    return True
+            return False
 
         # training section
         tr = cfg.get("training", {})
         if "epochs" in tr and not cli_overrides("--epochs"):
             args.epochs = int(tr["epochs"])
-        if "batch_size" in tr and not cli_overrides("--batch-size"):
+        if "batch_size" in tr and not cli_overrides("--batch-size", "--batch_size"):
             args.batch_size = int(tr["batch_size"])
         if "learning_rate" in tr and not cli_overrides("--lr"):
             args.lr = float(tr["learning_rate"])
         if "momentum" in tr and not cli_overrides("--momentum"):
             args.momentum = float(tr["momentum"])
-        if "weight_decay" in tr and not cli_overrides("--weight-decay"):
+        if "weight_decay" in tr and not cli_overrides(
+            "--weight-decay", "--weight_decay"
+        ):
             args.weight_decay = float(tr["weight_decay"])
-        if "num_workers" in tr and not cli_overrides("--num-workers"):
+        if "num_workers" in tr and not cli_overrides("--num-workers", "--num_workers"):
             args.num_workers = int(tr["num_workers"])
         if "early_stopping_patience" in tr and not cli_overrides("--patience"):
             args.early_stopping_patience = int(tr["early_stopping_patience"])
@@ -148,53 +154,59 @@ def main():
         md = cfg.get("model", {})
         if "architecture" in md and not cli_overrides("--model"):
             args.model = str(md["architecture"])
-        if "pretrained" in md and not cli_overrides("--no-pretrained"):
+        if "pretrained" in md and not cli_overrides(
+            "--no-pretrained", "--no_pretrained"
+        ):
             # CLI flag disables pretrained; YAML true => keep pretrained
             pretrained_yaml = bool(md["pretrained"])
             args.no_pretrained = not pretrained_yaml
 
         # data section
         dd = cfg.get("data", {})
-        if "data_dir" in dd and not cli_overrides("--data-dir"):
+        if "data_dir" in dd and not cli_overrides("--data-dir", "--data_dir"):
             args.data_dir = str(dd["data_dir"])
 
         # paths section
         pd = cfg.get("paths", {})
         if "checkpoint_dir" in pd and not (
-            cli_overrides("--checkpoint-dir") or cli_overrides("--save-dir")
+            cli_overrides("--checkpoint-dir", "--checkpoint_dir")
+            or cli_overrides("--save-dir", "--save_dir")
         ):
             args.checkpoint_dir = str(pd["checkpoint_dir"])
 
         # wandb section
         wb = cfg.get("wandb", {})
         if "enabled" in wb and not (
-            cli_overrides("--wandb") or cli_overrides("--no-wandb")
+            cli_overrides("--wandb", "--wandb")
+            or cli_overrides("--no-wandb", "--no_wandb")
         ):
             args.wandb = bool(wb["enabled"])
 
         # CLI flag --no-wandb always disables, --wandb always enables
-        if cli_overrides("--no-wandb"):
+        if cli_overrides("--no-wandb", "--no_wandb"):
             args.wandb = False
         elif cli_overrides("--wandb"):
             args.wandb = True
-        if "project" in wb and not cli_overrides("--wandb-project"):
+        if "project" in wb and not cli_overrides("--wandb-project", "--wandb_project"):
             args.wandb_project = str(wb["project"])
         # Optional W&B fields from YAML (no CLI flags defined for these)
         if "run_name" in wb:
             args.wandb_run_name = wb.get("run_name")
-        if "entity" in wb and not cli_overrides("--wandb-entity"):
+        if "entity" in wb and not cli_overrides("--wandb-entity", "--wandb_entity"):
             args.wandb_entity = wb.get("entity")
-        if "tags" in wb and not cli_overrides("--wandb-tags"):
+        if "tags" in wb and not cli_overrides("--wandb-tags", "--wandb_tags"):
             args.wandb_tags = wb.get("tags")
-        if "notes" in wb and not cli_overrides("--wandb-notes"):
+        if "notes" in wb and not cli_overrides("--wandb-notes", "--wandb_notes"):
             args.wandb_notes = wb.get("notes")
-        if "mode" in wb and not cli_overrides("--wandb-mode"):
+        if "mode" in wb and not cli_overrides("--wandb-mode", "--wandb_mode"):
             args.wandb_mode = wb.get("mode")
-        if "dir" in wb and not cli_overrides("--wandb-dir"):
+        if "dir" in wb and not cli_overrides("--wandb-dir", "--wandb_dir"):
             args.wandb_dir = wb.get("dir")
-        if "group" in wb and not cli_overrides("--wandb-group"):
+        if "group" in wb and not cli_overrides("--wandb-group", "--wandb_group"):
             args.wandb_group = wb.get("group")
-        if "job_type" in wb and not cli_overrides("--wandb-job-type"):
+        if "job_type" in wb and not cli_overrides(
+            "--wandb-job-type", "--wandb_job_type"
+        ):
             args.wandb_job_type = wb.get("job_type")
 
     # Auto-generate wandb run_name from model and timestamp if not provided
