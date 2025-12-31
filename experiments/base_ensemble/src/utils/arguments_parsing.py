@@ -133,6 +133,11 @@ def add_model_args(parser: argparse.ArgumentParser, supported_models: list):
         action="store_true",
         help="Train/Load models from scratch without pretrained weights",
     )
+    parser.add_argument(
+        "--robust",
+        action="store_true",
+        help="Enable robust augmentation (e.g., AugMix for resnet34_robust)",
+    )
 
     # Optimization arguments
     parser.add_argument(

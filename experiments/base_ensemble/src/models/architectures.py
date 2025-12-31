@@ -9,7 +9,13 @@ from torchvision import models
 
 
 # Supported model architectures
-SUPPORTED_MODELS = ["densenet121", "resnet34", "efficientnet_b0"]
+SUPPORTED_MODELS = [
+    "densenet121",
+    "resnet34",
+    "efficientnet_b0",
+    "vit_b_16",
+    "resnet34_robust",
+]
 
 
 def create_model(
@@ -47,6 +53,23 @@ def create_model(
         else:
             model = models.efficientnet_b0(weights=None)
         model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
+
+    elif model_name == "vit_b_16":
+        if pretrained:
+            model = models.vit_b_16(weights=models.ViT_B_16_Weights.IMAGENET1K_V1)
+        else:
+            model = models.vit_b_16(weights=None)
+        # ViT uses `heads` which is a sequential with one linear layer at index 0
+        model.heads[0] = nn.Linear(model.heads[0].in_features, num_classes)
+
+    elif model_name == "resnet34_robust":
+        # Robust-ResNet uses same architecture as ResNet34
+        # The 'robustness' comes from the training methodology (AugMix/DeepAugment)
+        if pretrained:
+            model = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1)
+        else:
+            model = models.resnet34(weights=None)
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
 
     else:
         raise ValueError(

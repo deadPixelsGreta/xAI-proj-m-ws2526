@@ -56,6 +56,19 @@ def get_train_transform(sota: bool = True) -> transforms.Compose:
     )
 
 
+def get_robust_transform() -> transforms.Compose:
+    """Return training transforms with AugMix for robustness."""
+    return transforms.Compose(
+        [
+            transforms.RandomResizedCrop(224, scale=(0.08, 1.0)),
+            transforms.RandomHorizontalFlip(),
+            transforms.AugMix(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+        ]
+    )
+
+
 def get_val_transform() -> transforms.Compose:
     """Return validation/inference transforms without augmentation."""
     return transforms.Compose(
@@ -74,6 +87,7 @@ def create_data_loaders(
     num_workers: int = 4,
     pin_memory: bool = True,
     sota_aug: bool = True,
+    robust_aug: bool = False,
 ) -> Tuple[DataLoader, DataLoader, int]:
     """Create data loaders from an ImageFolder layout under data_dir/train and data_dir/val.
 
@@ -82,9 +96,12 @@ def create_data_loaders(
     train_dir = os.path.join(data_dir, "train")
     val_dir = os.path.join(data_dir, "val")
 
-    train_dataset = datasets.ImageFolder(
-        train_dir, transform=get_train_transform(sota=sota_aug)
-    )
+    if robust_aug:
+        transform = get_robust_transform()
+    else:
+        transform = get_train_transform(sota=sota_aug)
+
+    train_dataset = datasets.ImageFolder(train_dir, transform=transform)
     val_dataset = datasets.ImageFolder(val_dir, transform=get_val_transform())
 
     # persistent_workers=True is recommended for training in environments like Colab

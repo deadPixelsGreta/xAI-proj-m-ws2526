@@ -224,8 +224,15 @@ def main():
     print(f"   Number of classes: {dataset_info['num_classes']}")
 
     # Create data loaders
+    # Automatically enable robust augmentation if model is resnet34_robust
+    robust_aug = args.robust or args.model == "resnet34_robust"
+
     train_loader, val_loader, num_classes = create_data_loaders(
-        args.data_dir, args.batch_size, args.num_workers, sota_aug=not args.no_sota
+        args.data_dir,
+        args.batch_size,
+        args.num_workers,
+        sota_aug=not args.no_sota,
+        robust_aug=robust_aug,
     )
 
     # Create model
