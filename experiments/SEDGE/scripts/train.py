@@ -7,27 +7,29 @@ from pathlib import Path
 # Add project root to path
 sys.path.append(str(Path(__file__).resolve().parents[3]))
 
-from experiments.base_ensemble.src.models import load_checkpoint
 from experiments.base_ensemble.src.data import create_data_loaders
 from experiments.base_ensemble.src.utils import get_device
 from experiments.SEDGE.models.sedge import SEDGEModel
+from experiments.SEDGE.models.backbone_factory import (
+    create_all_backbones,
+    DEFAULT_BACKBONES,
+)
 from experiments.SEDGE.data.feature_extractor import ImageFeatureExtractor
 from experiments.SEDGE.training.sedge_trainer import SEDGETrainer
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train SEDGE model")
+    parser = argparse.ArgumentParser(
+        description="Train SEDGE model with frozen pretrained backbones"
+    )
     parser.add_argument("--config", type=str, default=None, help="Path to YAML config")
     parser.add_argument("--data-dir", type=str, default="ImageNetSubset")
     parser.add_argument(
-        "--checkpoints",
+        "--backbones",
         type=str,
         nargs="+",
-        default=[
-            "experiments/base_ensemble/checkpoints/best_densenet121.pth",
-            "experiments/base_ensemble/checkpoints/best_resnet34.pth",
-            "experiments/base_ensemble/checkpoints/best_efficientnet_b0.pth",
-        ],
+        default=DEFAULT_BACKBONES,
+        help="List of backbone names to use (e.g., resnet34 densenet121 efficientnet_b0 vit_b_16)",
     )
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -35,7 +37,7 @@ def parse_args():
     parser.add_argument(
         "--save-path",
         type=str,
-        default="experiments/base_ensemble/checkpoints/sedge.pth",
+        default="experiments/SEDGE/checkpoints/sedge.pth",
     )
     parser.add_argument(
         "--num-workers",
@@ -51,6 +53,16 @@ def parse_args():
     return parser.parse_args()
 
 
+def count_trainable_params(model: torch.nn.Module) -> int:
+    """Count the number of trainable parameters in a model."""
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def count_frozen_params(model: torch.nn.Module) -> int:
+    """Count the number of frozen parameters in a model."""
+    return sum(p.numel() for p in model.parameters() if not p.requires_grad)
+
+
 def main():
     args = parse_args()
 
@@ -60,8 +72,7 @@ def main():
         with open(args.config, "r") as f:
             cfg = yaml.safe_load(f)
 
-        # Override args with config values if not specified on CLI (simplified logic)
-        # Check training section
+        # Override args with config values
         tr = cfg.get("training", {})
         if "lr" in tr:
             args.lr = float(tr["lr"])
@@ -71,30 +82,35 @@ def main():
             args.epochs = int(tr["epochs"])
         if "num_workers" in tr:
             args.num_workers = int(tr["num_workers"])
-        if "pin_memory" in tr:
-            args.pin_memory = bool(tr["pin_memory"])
 
-        # Check data section
         dd = cfg.get("data", {})
         if "data_dir" in dd:
             args.data_dir = str(dd["data_dir"])
 
+        md = cfg.get("model", {})
+        if "backbones" in md:
+            args.backbones = md["backbones"]
+
     device = get_device()
+    num_classes = 10  # ImageNetSubset
 
-    # 1. Load backbones
-    backbones = []
-    num_classes = 10  # Default for this project
-    for cp_path in args.checkpoints:
-        print(f"Loading backbone from {cp_path}...")
-        model, _, _ = load_checkpoint(cp_path, device, num_classes=num_classes)
-        backbones.append(model)
+    print("=" * 60)
+    print("SEDGE Training with Frozen Pretrained Backbones")
+    print("=" * 60)
+    print(f"\nDevice: {device}")
+    print(f"Backbones: {args.backbones}")
 
-    # 2. Create SEDGE model
-    # Extract model config
+    # 1. Load frozen pretrained backbones
+    print("\nLoading frozen pretrained backbones...")
+    backbones, feature_dims = create_all_backbones(args.backbones, num_classes, device)
+    print(f"Total backbones loaded: {len(backbones)}")
+
+    # 2. Extract model config
     model_conf = cfg.get("model", {})
     router_dims = model_conf.get("router_hidden_dims", [64, 32])
     top_k = model_conf.get("top_k", 0)
 
+    # 3. Create SEDGE model
     feature_extractor = ImageFeatureExtractor()
     sedge_model = SEDGEModel(
         backbones,
@@ -104,7 +120,15 @@ def main():
         top_k=top_k,
     ).to(device)
 
-    # 3. Create data loaders
+    # 4. Print parameter counts
+    trainable = count_trainable_params(sedge_model)
+    frozen = count_frozen_params(sedge_model)
+    print(f"\n📊 Parameter Summary:")
+    print(f"   Trainable: {trainable:,} ({trainable / 1e6:.2f}M)")
+    print(f"   Frozen:    {frozen:,} ({frozen / 1e6:.2f}M)")
+    print(f"   Ratio:     {trainable / (trainable + frozen) * 100:.2f}% trainable")
+
+    # 5. Create data loaders
     train_loader, val_loader, _ = create_data_loaders(
         args.data_dir,
         batch_size=args.batch_size,
@@ -112,29 +136,40 @@ def main():
         pin_memory=args.pin_memory,
     )
 
-    # 4. Train
-    # Merge config for trainer: Start with YAML training section
+    # 6. Configure trainer
     trainer_config = cfg.get("training", {})
-    # Ensure CLI/Arg overrides (lr, epochs, etc) take precedence
     trainer_config.update(
         {
             "lr": float(args.lr),
             "epochs": int(args.epochs),
             "weight_decay": float(trainer_config.get("weight_decay", 1e-4)),
-            "use_group_dro": bool(trainer_config.get("use_group_dro", True)),
+            "use_group_dro": bool(trainer_config.get("use_group_dro", False)),
             "entropy_reg_weight": float(trainer_config.get("entropy_reg_weight", 0.01)),
             "group_step_size": float(trainer_config.get("group_step_size", 0.01)),
         }
     )
 
+    # 7. Train
     trainer = SEDGETrainer(
         sedge_model, train_loader, val_loader, device, trainer_config
     )
     trainer.fit(args.epochs)
 
-    # 5. Save
-    torch.save(sedge_model.state_dict(), args.save_path)
-    print(f"SEDGE model saved to {args.save_path}")
+    # 8. Save
+    save_dir = Path(args.save_path).parent
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    torch.save(
+        {
+            "model_state_dict": sedge_model.state_dict(),
+            "backbones": args.backbones,
+            "num_classes": num_classes,
+            "router_hidden_dims": router_dims,
+            "top_k": top_k,
+        },
+        args.save_path,
+    )
+    print(f"\n✅ SEDGE model saved to {args.save_path}")
 
 
 if __name__ == "__main__":
