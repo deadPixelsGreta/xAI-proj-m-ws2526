@@ -2,7 +2,7 @@ training:
   lr: 0.001
   batch_size: 32
   epochs: 30
-  num_workers: 2 # Optimized for M1 Mac
+  num_workers: 2 
   weight_decay: 1e-4
   entropy_reg_weight: 0.01
   use_group_dro: false # Disabled - data loader doesn't yield group IDs
