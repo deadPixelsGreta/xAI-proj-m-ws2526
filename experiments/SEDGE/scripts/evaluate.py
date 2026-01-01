@@ -8,11 +8,14 @@ from tqdm import tqdm
 # Add project root to path
 sys.path.append(str(Path(__file__).resolve().parents[3]))
 
-from experiments.base_ensemble.src.models import load_checkpoint
 from experiments.base_ensemble.src.data import create_data_loaders, create_test_loader
 from experiments.base_ensemble.src.utils import get_device
 from experiments.SEDGE.models.sedge import SEDGEModel
 from experiments.SEDGE.data.feature_extractor import ImageFeatureExtractor
+from experiments.SEDGE.models.backbone_factory import (
+    create_all_backbones,
+    DEFAULT_BACKBONES,
+)
 
 
 def evaluate(model, loader, device, name="Test"):
@@ -83,18 +86,15 @@ def calculate_ece(probs, labels, n_bins=10):
 def main():
     parser = argparse.ArgumentParser(description="Evaluate SEDGE model")
     parser.add_argument("--sedge-checkpoint", type=str, required=True)
-    parser.add_argument("--backbones", type=str, nargs="+", required=True)
     parser.add_argument("--data-dir", type=str, default="ImageNetSubset")
     args = parser.parse_args()
 
     device = get_device()
     num_classes = 10
 
-    # 1. Load backbones
-    backbone_models = []
-    for cp_path in args.backbones:
-        model, _, _ = load_checkpoint(cp_path, device, num_classes=num_classes)
-        backbone_models.append(model)
+    # 1. Load frozen pretrained backbones
+    print("\nLoading frozen pretrained backbones...")
+    backbone_models, _ = create_all_backbones(DEFAULT_BACKBONES, num_classes, device)
 
     # 2. Reconstruct SEDGE model
     feature_extractor = ImageFeatureExtractor()
