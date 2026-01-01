@@ -57,6 +57,12 @@ def parse_args():
         action="store_true",
         help="Enable pin_memory in DataLoaders (recommended for CUDA)",
     )
+    parser.add_argument(
+        "--checkpoint-dir",
+        type=str,
+        default=None,
+        help="Path to directory with fine-tuned checkpoints (e.g., experiments/base_ensemble/checkpoints). If not provided, uses ImageNet pretrained weights.",
+    )
     return parser.parse_args()
 
 
@@ -97,6 +103,11 @@ def main():
         md = cfg.get("model", {})
         if "backbones" in md:
             args.backbones = md["backbones"]
+        # Load checkpoint_dir from config if not specified via CLI
+        if args.checkpoint_dir is None and "backbone_checkpoint_dir" in md:
+            checkpoint_dir = md["backbone_checkpoint_dir"]
+            if checkpoint_dir:  # Only set if not null/None
+                args.checkpoint_dir = str(checkpoint_dir)
 
     device = get_device()
     num_classes = 10  # ImageNetSubset
@@ -134,6 +145,12 @@ def main():
     ConsoleUI.key_value("Learning Rate", f"{args.lr:.2e}")
     ConsoleUI.key_value("Epochs", args.epochs)
     ConsoleUI.key_value("Num Workers", args.num_workers)
+    if args.checkpoint_dir:
+        ConsoleUI.key_value("Checkpoint Dir", color(args.checkpoint_dir, Colors.GREEN))
+    else:
+        ConsoleUI.key_value(
+            "Backbone Weights", color("ImageNet Pretrained", Colors.YELLOW)
+        )
 
     # ═══════════════════════════════════════════════════════════════════════
     # Load Backbones
@@ -146,7 +163,9 @@ def main():
 
     print()  # Spacing before downloads
 
-    backbones, feature_dims = create_all_backbones(args.backbones, num_classes, device)
+    backbones, feature_dims = create_all_backbones(
+        args.backbones, num_classes, device, checkpoint_dir=args.checkpoint_dir
+    )
 
     ConsoleUI.success(f"All {len(backbones)} backbones loaded successfully!")
 

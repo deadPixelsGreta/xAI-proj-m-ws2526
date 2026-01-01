@@ -16,6 +16,8 @@ model:
     - densenet121
     - efficientnet_b0
     - vit_b_16
+  # Path to fine-tuned checkpoints (null = use ImageNet pretrained)
+  backbone_checkpoint_dir: null # e.g., "experiments/base_ensemble/checkpoints"
   router_hidden_dims: [64, 32]
   num_classes: 10
   top_k: 2 # Top-k experts during inference
