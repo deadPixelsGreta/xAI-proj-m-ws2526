@@ -16,6 +16,13 @@ from experiments.SEDGE.models.backbone_factory import (
 )
 from experiments.SEDGE.data.feature_extractor import ImageFeatureExtractor
 from experiments.SEDGE.training.sedge_trainer import SEDGETrainer
+from experiments.SEDGE.training.console_ui import (
+    ConsoleUI,
+    Colors,
+    color,
+    format_params,
+    format_number,
+)
 
 
 def parse_args():
@@ -94,23 +101,66 @@ def main():
     device = get_device()
     num_classes = 10  # ImageNetSubset
 
-    print("=" * 60)
-    print("SEDGE Training with Frozen Pretrained Backbones")
-    print("=" * 60)
-    print(f"\nDevice: {device}")
-    print(f"Backbones: {args.backbones}")
+    # ═══════════════════════════════════════════════════════════════════════
+    # Beautiful Header
+    # ═══════════════════════════════════════════════════════════════════════
+    ConsoleUI.header(
+        "SEDGE Training",
+        subtitle="Sparse Expert Diverse Generalization Ensemble with Frozen Backbones",
+    )
 
-    # 1. Load frozen pretrained backbones
-    print("\nLoading frozen pretrained backbones...")
+    # ═══════════════════════════════════════════════════════════════════════
+    # Environment Info
+    # ═══════════════════════════════════════════════════════════════════════
+    ConsoleUI.section("Environment")
+
+    device_name = str(device).upper()
+    if "cuda" in str(device):
+        try:
+            gpu_name = torch.cuda.get_device_name(0)
+            device_name = f"CUDA ({gpu_name})"
+        except Exception:
+            device_name = "CUDA"
+
+    ConsoleUI.key_value("Device", color(device_name, Colors.GREEN))
+    ConsoleUI.key_value("PyTorch Version", torch.__version__)
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # Configuration Summary
+    # ═══════════════════════════════════════════════════════════════════════
+    ConsoleUI.section("Configuration")
+    ConsoleUI.key_value("Data Directory", args.data_dir)
+    ConsoleUI.key_value("Batch Size", args.batch_size)
+    ConsoleUI.key_value("Learning Rate", f"{args.lr:.2e}")
+    ConsoleUI.key_value("Epochs", args.epochs)
+    ConsoleUI.key_value("Num Workers", args.num_workers)
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # Load Backbones
+    # ═══════════════════════════════════════════════════════════════════════
+    ConsoleUI.section("Loading Backbones")
+    ConsoleUI.info(f"Backbones to load: {color(str(len(args.backbones)), Colors.BOLD)}")
+
+    for i, name in enumerate(args.backbones, 1):
+        ConsoleUI.info(f"  {i}. {color(name, Colors.CYAN)}")
+
+    print()  # Spacing before downloads
+
     backbones, feature_dims = create_all_backbones(args.backbones, num_classes, device)
-    print(f"Total backbones loaded: {len(backbones)}")
 
-    # 2. Extract model config
+    ConsoleUI.success(f"All {len(backbones)} backbones loaded successfully!")
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # Build Model
+    # ═══════════════════════════════════════════════════════════════════════
+    ConsoleUI.section("Model Architecture")
+
+    # Extract model config
     model_conf = cfg.get("model", {})
     router_dims = model_conf.get("router_hidden_dims", [64, 32])
     top_k = model_conf.get("top_k", 0)
 
-    # 3. Create SEDGE model
+    # Create SEDGE model
     feature_extractor = ImageFeatureExtractor()
     sedge_model = SEDGEModel(
         backbones,
@@ -120,15 +170,32 @@ def main():
         top_k=top_k,
     ).to(device)
 
-    # 4. Print parameter counts
+    # Parameter counts
     trainable = count_trainable_params(sedge_model)
     frozen = count_frozen_params(sedge_model)
-    print(f"\n📊 Parameter Summary:")
-    print(f"   Trainable: {trainable:,} ({trainable / 1e6:.2f}M)")
-    print(f"   Frozen:    {frozen:,} ({frozen / 1e6:.2f}M)")
-    print(f"   Ratio:     {trainable / (trainable + frozen) * 100:.2f}% trainable")
+    total = trainable + frozen
+    ratio = trainable / total * 100 if total > 0 else 0
 
-    # 5. Create data loaders
+    ConsoleUI.stats_box(
+        "Parameter Summary",
+        {
+            "Trainable Parameters": f"{format_number(trainable)} ({format_params(trainable)})",
+            "Frozen Parameters": f"{format_number(frozen)} ({format_params(frozen)})",
+            "Total Parameters": f"{format_number(total)} ({format_params(total)})",
+            "Trainable Ratio": f"{ratio:.4f}%",
+        },
+    )
+
+    ConsoleUI.key_value("Router Hidden Dims", str(router_dims))
+    ConsoleUI.key_value(
+        "Top-K Selection", str(top_k) if top_k > 0 else "Disabled (use all)"
+    )
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # Create Data Loaders
+    # ═══════════════════════════════════════════════════════════════════════
+    ConsoleUI.section("Data Loading")
+
     train_loader, val_loader, _ = create_data_loaders(
         args.data_dir,
         batch_size=args.batch_size,
@@ -136,7 +203,14 @@ def main():
         pin_memory=args.pin_memory,
     )
 
-    # 6. Configure trainer
+    ConsoleUI.key_value("Training Batches", len(train_loader))
+    ConsoleUI.key_value("Validation Batches", len(val_loader))
+    ConsoleUI.key_value("Training Samples", len(train_loader.dataset))
+    ConsoleUI.key_value("Validation Samples", len(val_loader.dataset))
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # Configure Trainer
+    # ═══════════════════════════════════════════════════════════════════════
     trainer_config = cfg.get("training", {})
     trainer_config.update(
         {
@@ -149,13 +223,17 @@ def main():
         }
     )
 
-    # 7. Train
+    # ═══════════════════════════════════════════════════════════════════════
+    # Train
+    # ═══════════════════════════════════════════════════════════════════════
     trainer = SEDGETrainer(
         sedge_model, train_loader, val_loader, device, trainer_config
     )
-    trainer.fit(args.epochs)
+    best_acc, total_time, epochs_completed = trainer.fit(args.epochs)
 
-    # 8. Save
+    # ═══════════════════════════════════════════════════════════════════════
+    # Save Model
+    # ═══════════════════════════════════════════════════════════════════════
     save_dir = Path(args.save_path).parent
     save_dir.mkdir(parents=True, exist_ok=True)
 
@@ -169,7 +247,13 @@ def main():
         },
         args.save_path,
     )
-    print(f"\n✅ SEDGE model saved to {args.save_path}")
+
+    ConsoleUI.training_complete(
+        best_acc=best_acc,
+        total_time=total_time,
+        total_epochs=epochs_completed,
+        save_path=args.save_path,
+    )
 
 
 if __name__ == "__main__":

@@ -5,6 +5,8 @@ import torch
 import torch.nn as nn
 from torchvision import models
 
+from experiments.SEDGE.training.console_ui import ConsoleUI
+
 
 # Backbone configurations: (name, model_fn, weights, get_num_features_fn)
 BACKBONE_CONFIGS = {
@@ -96,12 +98,15 @@ def create_all_backbones(
     """
     models_list = []
     feature_dims = []
+    total = len(backbone_names)
 
-    for name in backbone_names:
+    for index, name in enumerate(backbone_names, 1):
         model, feat_dim = create_frozen_backbone(name, num_classes, device)
         models_list.append(model)
         feature_dims.append(feat_dim)
-        print(f"  Loaded frozen backbone: {name} (features: {feat_dim})")
+
+        # Rich console output
+        ConsoleUI.backbone_loaded(name, feat_dim, index, total)
 
     return models_list, feature_dims
 

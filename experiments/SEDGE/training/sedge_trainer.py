@@ -5,8 +5,17 @@ import torch.optim as optim
 from typing import Dict
 from tqdm import tqdm
 
+from experiments.SEDGE.training.console_ui import (
+    ConsoleUI,
+    TrainingTimer,
+    Colors,
+    color,
+)
+
 
 class SEDGETrainer:
+    """SEDGE model trainer with rich console output."""
+
     def __init__(
         self,
         model: nn.Module,
@@ -27,19 +36,15 @@ class SEDGETrainer:
             weight_decay=config.get("weight_decay", 1e-4),
         )
 
+        # Store learning rate for display
+        self.lr = config.get("lr", 1e-3)
+
         self.criterion = nn.CrossEntropyLoss(reduction="none")  # None for GroupDRO
         self.entropy_reg_weight = config.get("entropy_reg_weight", 0.01)
         self.use_group_dro = config.get("use_group_dro", False)
 
         # For GroupDRO: keep track of group losses and weights
-        # If enabled, we need to know the number of groups.
-        # Ideally this comes from the dataset or config.
-        # Fallback to a safe default if not specified, or disable.
-        # User config has list of corruptions, length of that list is num_groups.
-        # But for now, let's play safe and check if explicit group count is given.
-        self.num_groups = config.get(
-            "num_groups", 5
-        )  # Default to 5 (Clean + 4 corruptions or just 5)
+        self.num_groups = config.get("num_groups", 5)
 
         self.group_counts = torch.ones(self.num_groups, device=device)
         self.group_weights = torch.ones(self.num_groups, device=device) / float(
@@ -51,6 +56,9 @@ class SEDGETrainer:
         self.early_stopping_patience = config.get("early_stopping_patience", 5)
         self.best_val_acc = 0.0
         self.epochs_without_improvement = 0
+
+        # Training timer
+        self.timer = TrainingTimer()
 
     def compute_entropy_reg(self, weights: torch.Tensor):
         """Computes entropy regularization to prevent collapse."""
@@ -129,29 +137,59 @@ class SEDGETrainer:
         return running_loss / len(self.val_loader), 100.0 * correct / total
 
     def fit(self, epochs: int):
-        print(f"Training SEDGE for {epochs} epochs...")
+        """Train the model with rich console output."""
+        ConsoleUI.section("Training")
+        ConsoleUI.info(f"Total epochs: {color(str(epochs), Colors.BOLD)}")
+        ConsoleUI.info(f"Learning rate: {color(f'{self.lr:.2e}', Colors.YELLOW)}")
+        ConsoleUI.info(
+            f"Early stopping patience: {color(str(self.early_stopping_patience), Colors.CYAN)}"
+        )
+
+        self.timer.start()
+        epochs_completed = 0
+
         for epoch in range(epochs):
+            self.timer.start_epoch()
+
+            # Epoch header
+            ConsoleUI.epoch_header(epoch + 1, epochs, lr=self.lr)
+
+            # Training and validation
             train_loss, train_acc = self.train_one_epoch(epoch)
             val_loss, val_acc = self.validate()
-            print(
-                f"Epoch {epoch + 1}: Train Loss {train_loss:.4f} Acc {train_acc:.2f}% | Val Loss {val_loss:.4f} Acc {val_acc:.2f}%"
+
+            # Timing
+            epoch_time = self.timer.end_epoch()
+            epochs_completed = epoch + 1
+
+            # Check if new best
+            is_best = val_acc > self.best_val_acc
+
+            # Print epoch summary
+            ConsoleUI.epoch_summary(
+                train_loss, train_acc, val_loss, val_acc, epoch_time, is_best=is_best
             )
 
+            # ETA estimate
+            eta = self.timer.eta(epochs_completed, epochs)
+            if epochs_completed < epochs:
+                ConsoleUI.info(
+                    f"Estimated time remaining: {color(eta, Colors.BRIGHT_CYAN)}"
+                )
+
             # Early stopping check
-            if val_acc > self.best_val_acc:
+            if is_best:
                 self.best_val_acc = val_acc
                 self.epochs_without_improvement = 0
-                print(f"   ✓ New best validation accuracy: {val_acc:.2f}%")
             else:
                 self.epochs_without_improvement += 1
                 if (
                     self.early_stopping_patience > 0
                     and self.epochs_without_improvement >= self.early_stopping_patience
                 ):
-                    print(
-                        f"\n⚠️ Early stopping triggered after {self.early_stopping_patience} epochs without improvement."
+                    ConsoleUI.early_stopping(
+                        self.early_stopping_patience, self.best_val_acc
                     )
-                    print(f"   Best validation accuracy: {self.best_val_acc:.2f}%")
                     break
 
-        return self.best_val_acc
+        return self.best_val_acc, self.timer.total_elapsed(), epochs_completed
