@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 from tqdm import tqdm
+import wandb
 
 # Add project root to path
 sys.path.append(str(Path(__file__).resolve().parents[3]))
@@ -58,7 +59,19 @@ def evaluate(model, loader, device, name="Test"):
     ece = calculate_ece(probs, all_targets)
     print(f"{name} ECE: {ece:.4f}")
 
-    return acc
+    # Log to wandb
+    metrics = {
+        f"{name}/accuracy": acc,
+        f"{name}/ece": ece,
+        f"{name}/router_entropy": avg_entropy,
+    }
+    # Log per-backbone routing weights
+    for i, weight in enumerate(avg_weights.tolist()):
+        metrics[f"{name}/router_weight_backbone_{i}"] = weight
+
+    wandb.log(metrics)
+
+    return acc, ece, avg_entropy, avg_weights.tolist()
 
 
 def calculate_ece(probs, labels, n_bins=10):
@@ -91,6 +104,15 @@ def main():
 
     device = get_device()
     num_classes = 10
+
+    # Initialize wandb
+    wandb.init(
+        project="SEDGE-Evaluation",
+        config={
+            "checkpoint": args.sedge_checkpoint,
+            "data_dir": args.data_dir,
+        },
+    )
 
     # 1. Load checkpoint metadata first
     print(f"\nLoading SEDGE checkpoint from {args.sedge_checkpoint}...")
@@ -144,6 +166,9 @@ def main():
         evaluate(sedge_model, phone_loader, device, "Phone-Photo")
     except Exception as e:
         print(f"Skipping Phone-Photo evaluation: {e}")
+
+    wandb.finish()
+    print("\nWandB logging complete!")
 
 
 if __name__ == "__main__":

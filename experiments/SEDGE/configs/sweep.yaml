@@ -1,0 +1,52 @@
+program: experiments/SEDGE/scripts/train.py
+method: bayes
+metric:
+  name: val_acc
+  goal: maximize
+
+parameters:
+  lr:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.01
+  
+  batch_size:
+    values: [16, 32, 64]
+  
+  epochs:
+    value: 30
+  
+  # Router architecture
+  router_hidden_dim_1:
+    values: [32, 64, 128]
+  
+  router_hidden_dim_2:
+    values: [16, 32, 64]
+  
+  top_k:
+    values: [0, 2, 3]  # 0 = use all backbones
+  
+  # Regularization
+  weight_decay:
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.001
+  
+  entropy_reg_weight:
+    distribution: log_uniform_values
+    min: 0.001
+    max: 0.1
+
+command:
+  - python
+  - ${program}
+  - --config
+  - experiments/SEDGE/configs/default.yaml
+  - --data-dir
+  - datasets
+  - --lr
+  - ${lr}
+  - --batch-size
+  - ${batch_size}
+  - --epochs
+  - ${epochs}
