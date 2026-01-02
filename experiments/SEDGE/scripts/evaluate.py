@@ -92,16 +92,40 @@ def main():
     device = get_device()
     num_classes = 10
 
-    # 1. Load frozen pretrained backbones
+    # 1. Load checkpoint metadata first
+    print(f"\nLoading SEDGE checkpoint from {args.sedge_checkpoint}...")
+    checkpoint = torch.load(
+        args.sedge_checkpoint, map_location=device, weights_only=False
+    )
+
+    # Get architecture info from checkpoint
+    backbone_names = checkpoint.get("backbones", DEFAULT_BACKBONES)
+    num_classes = checkpoint.get("num_classes", 10)
+    router_hidden_dims = checkpoint.get("router_hidden_dims", [64, 32])
+    top_k = checkpoint.get("top_k", 0)
+
+    print(f"  Backbones: {backbone_names}")
+    print(f"  Router dims: {router_hidden_dims}, top_k: {top_k}")
+
+    # 2. Load frozen pretrained backbones
     print("\nLoading frozen pretrained backbones...")
-    backbone_models, _ = create_all_backbones(DEFAULT_BACKBONES, num_classes, device)
+    backbone_models, _ = create_all_backbones(backbone_names, num_classes, device)
 
-    # 2. Reconstruct SEDGE model
+    # 3. Reconstruct SEDGE model with matching architecture
     feature_extractor = ImageFeatureExtractor()
-    sedge_model = SEDGEModel(backbone_models, num_classes, feature_extractor).to(device)
-    sedge_model.load_state_dict(torch.load(args.sedge_checkpoint, map_location=device))
+    sedge_model = SEDGEModel(
+        backbone_models,
+        num_classes,
+        feature_extractor,
+        router_hidden_dims=router_hidden_dims,
+        top_k=top_k,
+    ).to(device)
 
-    # 3. Evaluate across suites
+    # 4. Load trained weights
+    sedge_model.load_state_dict(checkpoint["model_state_dict"])
+    print("  Checkpoint loaded successfully!")
+
+    # 5. Evaluate across suites
     print("\n--- Evaluating on Clean Data ---")
     _, val_loader, _ = create_data_loaders(args.data_dir)
     evaluate(sedge_model, val_loader, device, "Clean Val")
