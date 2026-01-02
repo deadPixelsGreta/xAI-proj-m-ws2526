@@ -87,12 +87,6 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate SEDGE model")
     parser.add_argument("--sedge-checkpoint", type=str, required=True)
     parser.add_argument("--data-dir", type=str, default="ImageNetSubset")
-    parser.add_argument(
-        "--checkpoint-dir",
-        type=str,
-        default=None,
-        help="Path to directory with fine-tuned backbone checkpoints",
-    )
     args = parser.parse_args()
 
     device = get_device()
@@ -113,13 +107,13 @@ def main():
     print(f"  Backbones: {backbone_names}")
     print(f"  Router dims: {router_hidden_dims}, top_k: {top_k}")
 
-    # 2. Load frozen pretrained backbones
-    print("\nLoading frozen pretrained backbones...")
-    if args.checkpoint_dir:
-        print(f"  Using checkpoints from: {args.checkpoint_dir}")
-    backbone_models, _ = create_all_backbones(
-        backbone_names, num_classes, device, checkpoint_dir=args.checkpoint_dir
+    # 2. Build backbone architecture (weights will be loaded from SEDGE checkpoint)
+    print("\nBuilding model architecture...")
+    backbone_models, feature_dims = create_all_backbones(
+        backbone_names, num_classes, device
     )
+    for i, (name, dim) in enumerate(zip(backbone_names, feature_dims)):
+        print(f"    [{i + 1}/{len(backbone_names)}] {name} ({dim:,} features)")
 
     # 3. Reconstruct SEDGE model with matching architecture
     feature_extractor = ImageFeatureExtractor()
@@ -131,9 +125,9 @@ def main():
         top_k=top_k,
     ).to(device)
 
-    # 4. Load trained weights
+    # 4. Load trained weights (this overwrites all backbone + router weights)
     sedge_model.load_state_dict(checkpoint["model_state_dict"])
-    print("  Checkpoint loaded successfully!")
+    print("  All weights loaded from SEDGE checkpoint!")
 
     # 5. Evaluate across suites
     print("\n--- Evaluating on Clean Data ---")
