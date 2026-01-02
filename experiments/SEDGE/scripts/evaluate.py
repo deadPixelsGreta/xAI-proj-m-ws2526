@@ -87,6 +87,12 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate SEDGE model")
     parser.add_argument("--sedge-checkpoint", type=str, required=True)
     parser.add_argument("--data-dir", type=str, default="ImageNetSubset")
+    parser.add_argument(
+        "--checkpoint-dir",
+        type=str,
+        default=None,
+        help="Path to directory with fine-tuned backbone checkpoints",
+    )
     args = parser.parse_args()
 
     device = get_device()
@@ -109,7 +115,11 @@ def main():
 
     # 2. Load frozen pretrained backbones
     print("\nLoading frozen pretrained backbones...")
-    backbone_models, _ = create_all_backbones(backbone_names, num_classes, device)
+    if args.checkpoint_dir:
+        print(f"  Using checkpoints from: {args.checkpoint_dir}")
+    backbone_models, _ = create_all_backbones(
+        backbone_names, num_classes, device, checkpoint_dir=args.checkpoint_dir
+    )
 
     # 3. Reconstruct SEDGE model with matching architecture
     feature_extractor = ImageFeatureExtractor()
