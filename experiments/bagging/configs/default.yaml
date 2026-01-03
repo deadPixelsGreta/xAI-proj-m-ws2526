@@ -1,7 +1,7 @@
 # Default configuration for ImageNetSubset training
 
 training:
-  epochs: 10
+  epochs: 30
   batch_size: 32
   learning_rate: 0.001
   momentum: 0.9
@@ -9,10 +9,10 @@ training:
   num_workers: 0
   early_stopping_thresh: 8
   top_n_checkpoints: 2
-  freeze_backbone: true
+  freeze_backbone: false
 
 model:
-  architecture: densenet121 
+  architecture: resnet50 
   pretrained: true
 
 data:

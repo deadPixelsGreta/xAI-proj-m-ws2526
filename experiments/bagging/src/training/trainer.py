@@ -249,26 +249,26 @@ def train(
             break
         
         # Save best model old way
-        # if val_acc > best_val_acc:
-        #     best_val_acc = val_acc
-        #     checkpoint_path = save_path / f"best_{model_name}.pth"
-        #     torch.save(
-        #         {
-        #             "epoch": epoch,
-        #             "model_name": model_name,
-        #             "model_state_dict": model.state_dict(),
-        #             "optimizer_state_dict": optimizer.state_dict(),
-        #             "val_acc": val_acc,
-        #             "val_loss": val_loss,
-        #             "num_classes": num_classes,
-        #         },
-        #         checkpoint_path,
-        #     )
-        #     print(f"   New best model saved! (Val Acc: {val_acc:.2f}%)")
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            checkpoint_path = save_path / f"best_{model_name}.pth"
+            torch.save(
+                {
+                    "epoch": epoch,
+                    "model_name": model_name,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "val_acc": val_acc,
+                    "val_loss": val_loss,
+                    "num_classes": num_classes,
+                },
+                checkpoint_path,
+            )
+            print(f"   New best model saved! (Val Acc: {val_acc:.2f}%)")
 
-        #     if wandb_enabled and WANDB_AVAILABLE:
-        #         wandb.run.summary["best_val_accuracy"] = val_acc
-        #         wandb.run.summary["best_epoch"] = epoch + 1
+            if wandb_enabled and WANDB_AVAILABLE:
+                wandb.run.summary["best_val_accuracy"] = val_acc
+                wandb.run.summary["best_epoch"] = epoch + 1
 
     # Save final model
     final_path = save_path / f"final_{model_name}.pth"

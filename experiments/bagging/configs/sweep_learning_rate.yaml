@@ -18,9 +18,16 @@ parameters:
   config:
     value: experiments/bagging/configs/default.yaml
   model:
-    value: resnet18
-  seed:
-    value: 0
+    #value: resnet18
+    #value: resnet34
+    value: resnet50
+  augmentation:
+    values:
+      - baseline
+      - trivial
+      - randaugment
+      - autoaugment
+      - augmix
   
   # Hyperparameters to sweep
   lr:
@@ -32,8 +39,11 @@ parameters:
   batch_size:
     values: [32, 64, 128, 256]
 
+  seed:
+    value: 0
+
 # Early stopping to save compute
 early_terminate:
   type: hyperband
   min_iter: 3
-  max_iter: 15
+  max_iter: 10
