@@ -236,7 +236,7 @@ def main():
 
     # Create data loaders
     train_loader, val_loader, num_classes = create_data_loaders(
-        args.data_dir, args.batch_size, args.num_workers
+        args.data_dir, args.batch_size, args.num_workers, args.model
     )
 
     # Create model

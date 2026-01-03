@@ -21,13 +21,13 @@ parameters:
     #value: resnet18
     #value: resnet34
     value: resnet50
-  augmentation:
-    values:
-      - baseline
-      - trivial
-      - randaugment
-      - autoaugment
-      - augmix
+  # augmentation:
+  #   values:
+  #     - baseline
+  #     - trivial
+  #     - randaugment
+  #     - autoaugment
+  #     - augmix
   
   # Hyperparameters to sweep
   lr:

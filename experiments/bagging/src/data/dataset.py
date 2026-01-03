@@ -26,23 +26,44 @@ IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
 
 
-def get_train_transform() -> transforms.Compose:
-    """Return training transforms with resize, crop, flip, and ImageNet normalization."""
-    return transforms.Compose(
-        [
-            transforms.RandomResizedCrop(224, scale=(0.08, 1.0)),
-            transforms.RandomHorizontalFlip(p=0.5),
+# Augementation transforms for training depending on model type
+def get_train_transform(model_name: str) -> transforms.Compose:
+    base = [
+        transforms.RandomResizedCrop(224, scale=(0.08, 1.0)),
+        transforms.RandomHorizontalFlip(p=0.5),
+    ]
+
+    if model_name == "resnet18":
+        extra = [
             transforms.ColorJitter(
-                brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1
-            ),
-            transforms.RandomRotation(15),
-            transforms.RandAugment(num_ops=2, magnitude=9),
-            
-            #transforms.AugMix(severity=3),
-            #transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0)),
-    
+                brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05
+            )
+        ]
+
+    elif model_name == "resnet34":
+        extra = [
+            transforms.AutoAugment(
+                policy=transforms.AutoAugmentPolicy.IMAGENET
+            )
+        ]
+
+    elif model_name == "resnet50":
+        extra = [
+            transforms.RandAugment(num_ops=2, magnitude=9)
+        ]
+
+    else:
+        raise ValueError(f"Unknown model: {model_name}")
+
+    return transforms.Compose(
+        base
+        + extra
+        + [
             transforms.ToTensor(),
-            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+            transforms.Normalize(
+                mean=IMAGENET_MEAN,
+                std=IMAGENET_STD,
+            ),
         ]
     )
 
@@ -60,7 +81,7 @@ def get_val_transform() -> transforms.Compose:
 
 
 def create_data_loaders(
-    data_dir: str, batch_size: int = 32, num_workers: int = 4, pin_memory: bool = True
+    data_dir: str, batch_size: int = 32, num_workers: int = 4, pin_memory: bool = True, model_name: str = "resnet18"
 ) -> Tuple[DataLoader, DataLoader, int]:
     """Create data loaders from an ImageFolder layout under data_dir/train and data_dir/val.
 
@@ -69,7 +90,7 @@ def create_data_loaders(
     train_dir = os.path.join(data_dir, "train")
     val_dir = os.path.join(data_dir, "val")
 
-    train_dataset = datasets.ImageFolder(train_dir, transform=get_train_transform())
+    train_dataset = datasets.ImageFolder(train_dir, transform=get_train_transform(model_name))
     val_dataset = datasets.ImageFolder(val_dir, transform=get_val_transform())
 
     train_loader = DataLoader(
