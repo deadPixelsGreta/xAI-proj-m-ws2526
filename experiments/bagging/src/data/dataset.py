@@ -30,16 +30,18 @@ def get_train_transform() -> transforms.Compose:
     """Return training transforms with resize, crop, flip, and ImageNet normalization."""
     return transforms.Compose(
         [
-            transforms.RandomResizedCrop(224, scale=(0.7, 1.0)),
-            transforms.RandomHorizontalFlip(),
+            transforms.RandomResizedCrop(224, scale=(0.08, 1.0)),
+            transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(
                 brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1
             ),
-            transforms.RandomRotation(10),
+            transforms.RandomRotation(15),
             transforms.RandAugment(num_ops=2, magnitude=9),
+            
+            #transforms.AugMix(severity=3),
+            #transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0)),
+    
             transforms.ToTensor(),
-            transforms.AugMix(severity=3),
-            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 2.0)),
             transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
         ]
     )
