@@ -1,0 +1,55 @@
+program: src/training/train_augmentation_sweep.py
+method: bayes
+metric:
+  name: best_val_accuracy
+  goal: maximize
+
+parameters:
+  model_name:
+    value: 'resnet18'
+  
+  # ColorJitter augmentation
+  brightness:
+    distribution: uniform
+    min: 0.1
+    max: 0.5
+  contrast:
+    distribution: uniform
+    min: 0.1
+    max: 0.5
+  saturation:
+    distribution: uniform
+    min: 0.1
+    max: 0.5
+  hue:
+    distribution: uniform
+    min: 0.0
+    max: 0.2
+  rotation:
+    distribution: int_uniform
+    min: 0
+    max: 30
+  
+  # Training parameters
+  batch_size:
+    values: [64, 96, 128]
+  learning_rate:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.01
+  weight_decay:
+    distribution: uniform
+    min: 0.0
+    max: 0.1
+  label_smoothing:
+    distribution: uniform
+    min: 0.0
+    max: 0.2
+  epochs:
+    value: 25
+
+early_terminate:
+  type: hyperband
+  s: 2
+  eta: 3
+  max_iter: 20
