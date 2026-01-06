@@ -1,4 +1,4 @@
-program: src/training/train_augmentation_sweep.py
+program: experiments/bagging/training/train_augmentation_sweep.py
 method: bayes
 metric:
   name: best_val_accuracy
