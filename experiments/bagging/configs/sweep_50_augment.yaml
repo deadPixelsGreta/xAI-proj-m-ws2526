@@ -1,4 +1,4 @@
-program: experiments/bagging/training/train_augmentation_sweep.py
+# program: experiments/bagging/training/train_augmentation_sweep.py
 method: bayes
 metric:
   name: best_val_accuracy
@@ -8,35 +8,44 @@ parameters:
   model_name:
     value: 'resnet50'
   
-  # RandAugment
+  # Advanced augmentations - Mixup/Cutout for feature-level robustness
   num_ops:
     distribution: int_uniform
-    min: 1
+    min: 2
     max: 4
   magnitude:
     distribution: int_uniform
-    min: 5
+    min: 7
     max: 15
   use_cutout:
     values: [true, false]
-  
-  # Training parameters
-  batch_size:
-    values: [48, 64, 96]
-  learning_rate:
-    distribution: log_uniform_values
-    min: 0.0001
-    max: 0.01
-  weight_decay:
+  cutout_size:
+    distribution: int_uniform
+    min: 16
+    max: 64
+  use_mixup:
+    values: [true, false]
+  mixup_alpha:
     distribution: uniform
-    min: 0.01
-    max: 0.1
+    min: 0.1
+    max: 0.4
+  
+  
+ # Training parameters - adjust based on your ResNet50 sweep results
+  batch_size:
+    values: [32, 256] # best values from previous sweep
+  learning_rate:
+    distribution: log_uniform
+    min: 0.0008 # 3x smaller than best value from previous sweep 0.0023
+    max: 0.004 # 1.7x larger than best value from previous sweep
+  weight_decay:
+    value: 0.0001
   label_smoothing:
     distribution: uniform
-    min: 0.05
-    max: 0.2
+    min: 0.1 # slightly bigger than best value from previous sweep 0.05 for generalization
+    max: 0.3 # slightly larger than best value from previous sweep 0.08 for konzistency
   epochs:
-    value: 30
+    value: 25
 
 early_terminate:
   type: hyperband
