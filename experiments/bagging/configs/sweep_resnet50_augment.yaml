@@ -35,10 +35,11 @@ parameters:
   batch_size:
     values: [32, 256] # best values from previous sweep
   learning_rate:
-    distribution: log_uniform
+    distribution: log_uniform_values
     min: 0.0008 # 3x smaller than best value from previous sweep 0.0023
     max: 0.004 # 1.7x larger than best value from previous sweep
   weight_decay:
+    distribution: log_uniform_values
     value: 0.0001
   label_smoothing:
     distribution: uniform
