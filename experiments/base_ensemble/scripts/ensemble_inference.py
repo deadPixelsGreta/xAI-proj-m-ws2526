@@ -55,6 +55,12 @@ def parse_args():
         action="store_true",
         help="Evaluate ensemble on entire validation set",
     )
+    parser.add_argument(
+        "--eval-individuals",
+        "--eval_individuals",
+        action="store_true",
+        help="Evaluate individual models along with ensemble on the target set (for fair comparison)",
+    )
 
     # Model arguments
     parser.add_argument(
@@ -101,6 +107,7 @@ def evaluate_ensemble(
     split="val",
     wandb_enabled=True,
     wandb_project=None,
+    eval_individuals=False,
 ):
     """Evaluate ensemble on entire validation or test set with optional W&B logging."""
     eval_dir = Path(data_dir) / split
@@ -121,6 +128,7 @@ def evaluate_ensemble(
                 "model_names": model_names,
                 "data_dir": str(data_dir),
                 "split": split,
+                "eval_individuals": eval_individuals,
             },
         )
         print(f"   W&B logging enabled: {wandb.run.url}")
@@ -129,6 +137,9 @@ def evaluate_ensemble(
     total_images = 0
     per_class_correct = {name: 0 for name in CLASS_NAMES}
     per_class_total = {name: 0 for name in CLASS_NAMES}
+    
+    # Track individual model performance if requested
+    individual_correct = {name: 0 for name in model_names}
 
     # Track disagreement metrics
     all_disagreements = []
@@ -159,6 +170,13 @@ def evaluate_ensemble(
             if result.predicted_class == class_name:
                 class_correct += 1
                 total_correct += 1
+            
+            # Track individual correct predictions if requested
+            if eval_individuals:
+                for i, (model_pred_class, _) in enumerate(result.individual_predictions):
+                    name = model_names[i]
+                    if model_pred_class == class_name:
+                        individual_correct[name] += 1
 
             total_images += 1
 
@@ -198,37 +216,46 @@ def evaluate_ensemble(
 
     # Get individual model accuracies for comparison
     individual_accs = {}
-    print("\n Model Comparison:")
+    print(f"\n Model Comparison (on {split.capitalize()} set):")
     print("-" * 50)
-    for name in model_names:
-        # Get individual model accuracy from checkpoint
-        # Handle seed variants by looking for the exact file name if possible,
-        # but here we try to find the match within the provided checkpoint_dir
-        pattern = f"best_{name}.pth"
-        checkpoint_path = checkpoint_dir / pattern
+    
+    if eval_individuals:
+        # Show actual performance on the current set
+        for name in model_names:
+            acc = 100 * individual_correct[name] / total_images if total_images > 0 else 0
+            individual_accs[name] = acc
+            print(f"   {name:25s} {acc:6.2f}%")
+    else:
+        # Fallback to metadata from checkpoints (val acc on clean set)
+        for name in model_names:
+            # Get individual model accuracy from checkpoint
+            # Handle seed variants by looking for the exact file name if possible,
+            # but here we try to find the match within the provided checkpoint_dir
+            pattern = f"best_{name}.pth"
+            checkpoint_path = checkpoint_dir / pattern
 
-        if checkpoint_path.exists():
-            ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
-            individual_acc = ckpt.get("val_acc", 0)
-            individual_accs[name] = individual_acc
-            print(f"   {name:25s} {individual_acc:.2f}%")
-        else:
-            # Fallback for seed-specific filenames if exact match not found
-            alt_paths = list(checkpoint_dir.glob(f"best_{name}_seed*.pth"))
-            if alt_paths:
-                checkpoint_path = alt_paths[0]
-                ckpt = torch.load(
-                    checkpoint_path, map_location=device, weights_only=False
-                )
+            if checkpoint_path.exists():
+                ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
                 individual_acc = ckpt.get("val_acc", 0)
                 individual_accs[name] = individual_acc
-                print(
-                    f"   {name:25s} {individual_acc:.2f}% (from {checkpoint_path.name})"
-                )
+                print(f"   {name:25s} {individual_acc:.2f}% (Metadata Val)")
             else:
-                print(f"   {name:25s} [Accuracy not found in {checkpoint_dir}]")
+                # Fallback for seed-specific filenames if exact match not found
+                alt_paths = list(checkpoint_dir.glob(f"best_{name}_seed*.pth"))
+                if alt_paths:
+                    checkpoint_path = alt_paths[0]
+                    ckpt = torch.load(
+                        checkpoint_path, map_location=device, weights_only=False
+                    )
+                    individual_acc = ckpt.get("val_acc", 0)
+                    individual_accs[name] = individual_acc
+                    print(
+                        f"   {name:25s} {individual_acc:.2f}% (Metadata Val from {checkpoint_path.name})"
+                    )
+                else:
+                    print(f"   {name:25s} [Accuracy not found in {checkpoint_dir}]")
 
-    print(f"   {'ENSEMBLE':25s} {overall_acc:.2f}% *")
+    print(f"   {'ENSEMBLE':25s} {overall_acc:6.2f}% *")
 
     # Log to W&B
     if wandb_enabled and WANDB_AVAILABLE:
@@ -341,6 +368,7 @@ def main():
             split=args.split,
             wandb_enabled=args.wandb,
             wandb_project=args.wandb_project,
+            eval_individuals=args.eval_individuals,
         )
 
     # Single image inference
