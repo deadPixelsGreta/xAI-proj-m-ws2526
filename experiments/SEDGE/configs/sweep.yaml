@@ -7,14 +7,14 @@ metric:
 parameters:
   lr:
     distribution: log_uniform_values
-    min: 0.0001
+    min: 0.00001
     max: 0.01
   
   batch_size:
-    values: [16, 32, 64]
+    values: [128, 256, 512]
   
   epochs:
-    value: 30
+    value: 20
   
   # Router architecture
   router_hidden_dim_1:
@@ -24,7 +24,7 @@ parameters:
     values: [16, 32, 64]
   
   top_k:
-    values: [0, 2, 3]  # 0 = use all backbones
+    values: [0, 1, 2]  # 0 = use all backbones, 1 = hard selection
   
   # Regularization
   weight_decay:
@@ -41,12 +41,4 @@ command:
   - python
   - ${program}
   - --config
-  - experiments/SEDGE/configs/default.yaml
-  - --data-dir
-  - datasets
-  - --lr
-  - ${lr}
-  - --batch-size
-  - ${batch_size}
-  - --epochs
-  - ${epochs}
+  - experiments/SEDGE/configs/university_pc.yaml

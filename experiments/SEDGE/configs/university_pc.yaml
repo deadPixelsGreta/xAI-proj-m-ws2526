@@ -1,9 +1,9 @@
 training:
   lr: 0.001
-  batch_size: 128     # Higher batch size for dedicated GPUs
+  batch_size: 256     # 16GB VRAM on A4000 allows for larger batches with frozen backbones
   epochs: 10
-  num_workers: 8      # Use multiple CPU cores for data loading
-  pin_memory: true    # Recommended for faster CPU to GPU (CUDA) transfer
+  num_workers: 8      # Efficient data fetching for multi-core CPUs
+  pin_memory: true    # Optimized for CUDA transfers
   weight_decay: 1e-4
   entropy_reg_weight: 0.01
   use_group_dro: true
@@ -14,7 +14,7 @@ model:
   num_classes: 10
 
 data:
-  data_dir: "/Users/stephpark/Documents/xai-proj-m-ws2526/ImageNetSubset" # Adjust if data is in a different location on university PC
+  data_dir: C:\Users\ba081274\Downloads\ImageNetSubset\ImageNetSubset # Path relative to project root, common for server/workstation setups
   corruptions:
     - jpeg
     - blur
