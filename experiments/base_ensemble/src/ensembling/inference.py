@@ -39,7 +39,8 @@ def ensemble_predict(
 
     if weights is not None:
         weight_tensor = torch.tensor(weights, device=device, dtype=torch.float32)
-        weight_tensor = F.softmax(weight_tensor, dim=0)
+        # Normalize weights to sum to 1
+        weight_tensor = weight_tensor / weight_tensor.sum()
         ensemble_probs = (stacked_probs * weight_tensor.view(-1, 1, 1)).sum(dim=0)
     else:
         ensemble_probs = torch.mean(stacked_probs, dim=0)
@@ -66,6 +67,7 @@ def ensemble_predict_extended(
     image_tensor: torch.Tensor,
     device: torch.device,
     class_names: Optional[List[str]] = None,
+    weights: Optional[List[float]] = None,
 ) -> EnsembleResult:
     """Run ensemble prediction with extended diagnostic metrics."""
     if class_names is None:
@@ -73,9 +75,17 @@ def ensemble_predict_extended(
 
     all_probs = _get_model_probabilities(models, image_tensor, device)
 
-    # Stack and average (assuming batch size 1 for these specific metrics currently)
+    # Stack and combine
     stacked_probs = torch.stack(all_probs, dim=0)
-    ensemble_probs = torch.mean(stacked_probs, dim=0)
+    
+    if weights is not None:
+        # Normalize weights to sum to 1
+        w = torch.tensor(weights, device=device, dtype=torch.float32)
+        w = w / w.sum()
+        # Apply weights: [num_models] * [num_models, batch, num_classes]
+        ensemble_probs = (stacked_probs * w.view(-1, 1, 1)).sum(dim=0)
+    else:
+        ensemble_probs = torch.mean(stacked_probs, dim=0)
 
     # Get ensemble prediction
     top_prob, top_idx = torch.max(ensemble_probs, dim=1)
@@ -231,6 +241,7 @@ def run_inference(
     show_diagnostics: bool = True,
     transform: Optional[Any] = None,
     class_names: Optional[List[str]] = None,
+    weights: Optional[List[float]] = None,
 ) -> Dict[str, Any]:
     """Run ensemble inference for one image path and return results."""
     # Load and preprocess image
@@ -242,7 +253,7 @@ def run_inference(
 
     # Run core calculation
     result = ensemble_predict_extended(
-        models, model_names, image_tensor, device, class_names
+        models, model_names, image_tensor, device, class_names, weights=weights
     )
     all_predictions = get_top_predictions(result.ensemble_probs, top_k, class_names)
     predictions = all_predictions[0]  # run_inference assumes batch size 1

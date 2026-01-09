@@ -263,7 +263,8 @@ def train(
         weight_decay=config.weight_decay,
     )
     scheduler = _setup_scheduler(optimizer, config, len(train_loader))
-    scaler = torch.amp.GradScaler(enabled=config.amp and device.type == "cuda")
+    # Only create a scaler when AMP is enabled; this avoids accidental autocast
+    scaler = torch.amp.GradScaler(enabled=config.amp and device.type == "cuda") if config.amp else None
 
     save_path = Path(save_dir)
     save_path.mkdir(exist_ok=True)
@@ -441,7 +442,6 @@ def _log_epoch_summary(
     logger.log(
         {
             "epoch": epoch + 1,
-            "train/loss": t_loss,
             "train/accuracy": t_acc,
             "val/loss": v_loss,
             "val/accuracy": v_acc,
