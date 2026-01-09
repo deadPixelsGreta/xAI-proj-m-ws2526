@@ -91,11 +91,18 @@ class MoEEnsemble(nn.Module):
     Full Mixture-of-Experts Ensemble.
     Combines N experts using a dynamic Router.
     """
-    def __init__(self, experts: List[FeatureWrapper], router: MoERouter, feature_provider_idx: int = 3):
+    def __init__(self, experts: List[FeatureWrapper], router: MoERouter, feature_provider_idx: int = 3, temperatures: List[float] = None):
         super().__init__()
         self.experts = nn.ModuleList(experts)
         self.router = router
         self.feature_provider_idx = feature_provider_idx # Which expert provides features to the router
+        
+        if temperatures is None:
+            self.temperatures = [1.0] * len(experts)
+        else:
+            self.temperatures = temperatures
+        # Register as buffer so it moves with the model to device
+        self.register_buffer("temps", torch.tensor(self.temperatures))
 
     def forward(self, x) -> Tuple[torch.Tensor, torch.Tensor]:
         expert_logits = []
@@ -104,7 +111,9 @@ class MoEEnsemble(nn.Module):
         # 1. Get predictions from all experts
         for i, expert in enumerate(self.experts):
             logits, feats = expert(x)
-            expert_logits.append(logits)
+            # Apply temperature scaling: logits / T
+            scaled_logits = logits / self.temps[i]
+            expert_logits.append(scaled_logits)
             if i == self.feature_provider_idx:
                 router_features = feats
         

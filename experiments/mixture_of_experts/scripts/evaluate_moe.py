@@ -50,8 +50,46 @@ def parse_args():
     # Feature provider for router
     parser.add_argument("--fe-idx", type=int, default=3)
     parser.add_argument("--fe-dim", type=int, default=768)
+    parser.add_argument("--temperatures-path", type=str, default="experiments/temp_calibration/checkpoints/temperatures.pth", help="Optional calibrated temperatures")
 
     return parser.parse_args()
+
+def load_moe_ensemble_helper(expert_paths, checkpoint_dir, router_path, fe_idx, fe_dim, device, temperatures_path=None):
+    """
+    Helper function to build and load a fully calibrated MoE ensemble.
+    """
+    checkpoint_dir = Path(checkpoint_dir)
+    
+    # 1. Load experts
+    experts = []
+    for exp_path in expert_paths:
+        path = checkpoint_dir / exp_path if not os.path.isabs(exp_path) else Path(exp_path)
+        model, name, _ = load_checkpoint(str(path), device)
+        wrapped = FeatureWrapper(model, name)
+        wrapped.eval()
+        experts.append(wrapped)
+        
+    # 2. Load router
+    router = MoERouter(input_dim=fe_dim, num_experts=len(experts)).to(device)
+    state = torch.load(router_path, map_location=device)
+    router.load_state_dict(state['router_state_dict'])
+    router.eval()
+    
+    # 3. Load temperatures
+    temperatures = None
+    if temperatures_path and os.path.exists(temperatures_path):
+        temp_dict = torch.load(temperatures_path, map_location=device)
+        temperatures = []
+        for exp_path in expert_paths:
+            path = checkpoint_dir / exp_path if not os.path.isabs(exp_path) else Path(exp_path)
+            # Re-running load_checkpoint momentarily just for name (sub-optimal but safe)
+            _, name, _ = load_checkpoint(str(path), "cpu")
+            t = temp_dict.get(name, 1.0)
+            temperatures.append(t)
+            
+    moe_model = MoEEnsemble(experts, router, feature_provider_idx=fe_idx, temperatures=temperatures).to(device)
+    moe_model.eval()
+    return moe_model
 
 def evaluate_moe():
     args = parse_args()
@@ -63,34 +101,26 @@ def evaluate_moe():
     print("="*60)
     
     # 1. Load experts
-    experts = []
-    checkpoint_dir = Path(args.checkpoint_dir)
-    print(f"\n Loading {len(args.experts)} experts...")
-    for exp_path in args.experts:
-        path = checkpoint_dir / exp_path if not os.path.isabs(exp_path) else Path(exp_path)
-        model, name, _ = load_checkpoint(str(path), device)
-        wrapped = FeatureWrapper(model, name)
-        wrapped.eval()
-        experts.append(wrapped)
-        print(f"   ✓ {name}")
-        
     # 2. Load router
-    print(f"\n Loading router from {args.router_path}...")
-    router = MoERouter(input_dim=args.fe_dim, num_experts=len(experts)).to(device)
-    state = torch.load(args.router_path, map_location=device)
-    router.load_state_dict(state['router_state_dict'])
-    router.eval()
+    # 3. Load temperatures if available
     
-    moe_model = MoEEnsemble(experts, router, feature_provider_idx=args.fe_idx).to(device)
-    moe_model.eval()
+    moe_model = load_moe_ensemble_helper(
+        expert_paths=args.experts,
+        checkpoint_dir=args.checkpoint_dir,
+        router_path=args.router_path,
+        fe_idx=args.fe_idx,
+        fe_dim=args.fe_dim,
+        device=device,
+        temperatures_path=args.temperatures_path
+    )
     
-    # 3. Setup Data
+    # 4. Setup Data
     transform = get_val_transform()
     test_dir = Path(args.data_dir) / args.split
     test_ds = datasets.ImageFolder(root=str(test_dir), transform=transform)
     test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
     
-    # 4. Run Inference
+    # 5. Run Inference
     correct_moe = 0
     correct_mean = 0
     total = 0
@@ -117,7 +147,7 @@ def evaluate_moe():
             
             total += targets.size(0)
             
-    # 5. Results Summary
+    # 6. Results Summary
     moe_acc = 100. * correct_moe / total
     mean_acc = 100. * correct_mean / total
     
