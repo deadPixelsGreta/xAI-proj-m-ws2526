@@ -89,10 +89,8 @@ class SEDGEModel(nn.Module):
             self.num_backbones, num_classes, hidden_dims=router_hidden_dims
         )
 
-        # Freeze backbones
-        for bb in self.backbones:
-            for param in bb.parameters():
-                param.requires_grad = False
+        # Optimization: We no longer freeze backbones here because the
+        # backbone_factory handles the specific (partial) freezing logic.
 
     def forward(self, x, return_weights=False):
         # 1. Extract degradation features

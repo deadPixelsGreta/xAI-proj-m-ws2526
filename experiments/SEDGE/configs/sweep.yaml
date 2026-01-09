@@ -8,7 +8,7 @@ parameters:
   lr:
     distribution: log_uniform_values
     min: 0.00001
-    max: 0.01
+    max: 0.001
   
   batch_size:
     values: [128, 256, 512]
@@ -36,6 +36,10 @@ parameters:
     distribution: log_uniform_values
     min: 0.001
     max: 0.1
+
+  # Model training strategy
+  adapter_tuning:
+    value: True
 
 command:
   - python
