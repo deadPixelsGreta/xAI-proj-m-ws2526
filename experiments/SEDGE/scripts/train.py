@@ -2,6 +2,7 @@ import argparse
 import sys
 import yaml
 import torch
+import wandb
 from pathlib import Path
 
 # Add project root to path
@@ -79,6 +80,15 @@ def count_frozen_params(model: torch.nn.Module) -> int:
 def main():
     args = parse_args()
 
+    # Initialize wandb
+    # If run in a sweep, this will pick up the run ID and config
+    wandb.init(project="SEDGE-Training")
+
+    # Enable TF32 for Ampere GPUs (like RTX A4000)
+    if torch.cuda.is_available():
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+
     # Load config if provided
     cfg = {}
     if args.config:
@@ -108,6 +118,25 @@ def main():
             checkpoint_dir = md["backbone_checkpoint_dir"]
             if checkpoint_dir:  # Only set if not null/None
                 args.checkpoint_dir = str(checkpoint_dir)
+
+    # 3. Override with WandB sweep parameters if available
+    # This is crucial for sweeps to work!
+    if wandb.config:
+        # Map flat wandb.config to our nested structure or args
+        if "lr" in wandb.config:
+            args.lr = wandb.config.lr
+        if "batch_size" in wandb.config:
+            args.batch_size = wandb.config.batch_size
+        if "epochs" in wandb.config:
+            args.epochs = wandb.config.epochs
+        
+        # Merge other wandb.config into cfg for the trainer
+        for key, value in wandb.config.items():
+            if key in ["lr", "batch_size", "epochs"]:
+                continue
+            if "training" not in cfg:
+                cfg["training"] = {}
+            cfg["training"][key] = value
 
     device = get_device()
     num_classes = 10  # ImageNetSubset
@@ -178,6 +207,13 @@ def main():
     model_conf = cfg.get("model", {})
     router_dims = model_conf.get("router_hidden_dims", [64, 32])
     top_k = model_conf.get("top_k", 0)
+
+    # Override with sweep parameters if present
+    if wandb.config:
+        if "router_hidden_dim_1" in wandb.config and "router_hidden_dim_2" in wandb.config:
+            router_dims = [wandb.config.router_hidden_dim_1, wandb.config.router_hidden_dim_2]
+        if "top_k" in wandb.config:
+            top_k = wandb.config.top_k
 
     # Create SEDGE model
     feature_extractor = ImageFeatureExtractor()
