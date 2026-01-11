@@ -4,8 +4,7 @@
 import argparse
 import sys
 from pathlib import Path
-
-import torch
+from typing import List, Optional
 
 try:
     import wandb
@@ -21,12 +20,14 @@ from experiments.base_ensemble.src.utils.arguments_parsing import (
     add_wandb_args,
 )
 from experiments.base_ensemble.src.models import load_checkpoint
-from experiments.base_ensemble.src.data import CLASS_NAMES, get_val_transform
-from experiments.base_ensemble.src.ensembling import run_inference
+from experiments.base_ensemble.src.data import CLASS_NAMES
+from experiments.base_ensemble.src.ensembling import (
+    run_inference,
+    evaluate_ensemble_dataset,
+    EvaluationResult,
+)
 from experiments.base_ensemble.src.ensembling.inference import (
     find_default_checkpoints,
-    ensemble_predict_extended,
-    load_image,
 )
 
 
@@ -92,6 +93,110 @@ def parse_args():
     return parser.parse_args()
 
 
+def report_and_log_results(
+    result: EvaluationResult,
+    model_names: List[str],
+    wandb_enabled: bool = False,
+    wandb_project: Optional[str] = None,
+    split: str = "val",
+    data_dir: str = "",
+):
+    """Report results to console and optional W&B."""
+    print("\n" + "=" * 60)
+    print(f" Ensemble Evaluation on {split.capitalize()} Set")
+    print("=" * 60)
+
+    # Initialize W&B
+    if wandb_enabled and WANDB_AVAILABLE:
+        wandb.init(
+            project=wandb_project or "imagenet-subset-ensemble",
+            name=f"ensemble-eval-{split}-{len(model_names)}models",
+            config={
+                "num_models": len(model_names),
+                "model_names": model_names,
+                "data_dir": data_dir,
+                "split": split,
+            },
+        )
+        print(f"   W&B logging enabled: {wandb.run.url}")
+
+    # Per-Class Comparison Table
+    print("\n Per-Class Accuracy Comparison:")
+    header = f"   {'Class':20s} | {'Ensemble':8s} | " + " | ".join(
+        [f"{name[:12]:12s}" for name in model_names]
+    )
+    print(header)
+    print("-" * len(header))
+
+    for class_name in CLASS_NAMES:
+        ens_stats = result.per_class_ensemble.get(class_name, {"accuracy": 0})
+        row = f"   {class_name:20s} | {ens_stats['accuracy']:7.1f}% | "
+
+        individual_accs = []
+        for name in model_names:
+            m_stats = result.per_class_individuals[name].get(
+                class_name, {"accuracy": 0}
+            )
+            row += f"{m_stats['accuracy']:11.1f}% | "
+            individual_accs.append(m_stats["accuracy"])
+
+        print(row)
+
+    print("-" * len(header))
+
+    # Overall Metrics
+    print("\n Performance Metrics:")
+    print("-" * 50)
+    print(f"   Overall Ensemble Accuracy: {result.overall_accuracy:5.2f}%")
+    print(
+        f"   Oracle Accuracy:           {result.oracle_accuracy:5.2f}% (theoretical max)"
+    )
+    print(f"   Expected Calibration Error: {result.ece:5.4f}")
+    print(f"   Average Disagreement:      {result.avg_disagreement:5.4f}")
+    print(f"   Average Agreement Ratio:   {result.avg_agreement_ratio * 100:5.1f}%")
+    print(f"   Total Images:              {result.total_images}")
+
+    print("\n Model Comparison (Overall):")
+    print("-" * 50)
+    for name in model_names:
+        print(f"   {name:25s} {result.individual_accuracies[name]:5.2f}%")
+    print(f"   {'ENSEMBLE':25s} {result.overall_accuracy:5.2f}% *")
+
+    # W&B Logging
+    if wandb_enabled and WANDB_AVAILABLE:
+        # Summary metrics
+        wandb.log(
+            {
+                "ensemble/accuracy": result.overall_accuracy,
+                "ensemble/oracle_accuracy": result.oracle_accuracy,
+                "ensemble/ece": result.ece,
+                "ensemble/avg_disagreement": result.avg_disagreement,
+                "ensemble/avg_agreement_ratio": result.avg_agreement_ratio * 100,
+                "ensemble/total_images": result.total_images,
+            }
+        )
+
+        # Detailed per-class table
+        columns = ["class", "ensemble_acc"] + [f"{n}_acc" for n in model_names]
+        data = []
+        for cls in CLASS_NAMES:
+            row = [cls, result.per_class_ensemble[cls]["accuracy"]]
+            for n in model_names:
+                row.append(result.per_class_individuals[n][cls]["accuracy"])
+            data.append(row)
+
+        wandb.log(
+            {
+                "ensemble/detailed_class_comparison": wandb.Table(
+                    columns=columns, data=data
+                )
+            }
+        )
+
+        wandb.finish()
+        print("\n   W&B logging complete!")
+
+
 def evaluate_ensemble(
     models,
     model_names,
@@ -102,193 +207,26 @@ def evaluate_ensemble(
     wandb_enabled=True,
     wandb_project=None,
 ):
-    """Evaluate ensemble on entire validation or test set with optional W&B logging."""
-    eval_dir = Path(data_dir) / split
-    transform = get_val_transform()  # Same transform for val and test
-    checkpoint_dir = Path(checkpoint_dir) if checkpoint_dir else Path("checkpoints")
-
-    print("\n" + "=" * 60)
-    print(f"Ensemble Evaluation on {split.capitalize()} Set")
-    print("=" * 60)
-
-    # Initialize W&B if enabled
-    if wandb_enabled and WANDB_AVAILABLE:
-        wandb.init(
-            project=wandb_project or "imagenet-subset-ensemble",
-            name=f"ensemble-eval-{split}-{len(models)}models",
-            config={
-                "num_models": len(models),
-                "model_names": model_names,
-                "data_dir": str(data_dir),
-                "split": split,
-            },
-        )
-        print(f"   W&B logging enabled: {wandb.run.url}")
-
-    total_correct = 0
-    total_images = 0
-    per_class_correct = {name: 0 for name in CLASS_NAMES}
-    per_class_total = {name: 0 for name in CLASS_NAMES}
-
-    # Track disagreement metrics
-    all_disagreements = []
-    all_agreement_ratios = []
-
-    for class_name in CLASS_NAMES:
-        class_dir = eval_dir / class_name
-        if not class_dir.exists():
-            continue
-
-        image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"}
-        image_files = [
-            f for f in class_dir.iterdir() if f.suffix.lower() in image_extensions
-        ]
-
-        class_correct = 0
-        for image_file in image_files:
-            # Load and predict with extended metrics
-            image_tensor = load_image(str(image_file), transform)
-            result = ensemble_predict_extended(
-                models, model_names, image_tensor, device
-            )
-
-            # Track metrics
-            all_disagreements.append(result.disagreement)
-            all_agreement_ratios.append(result.agreement_ratio)
-
-            if result.predicted_class == class_name:
-                class_correct += 1
-                total_correct += 1
-
-            total_images += 1
-
-        per_class_correct[class_name] = class_correct
-        per_class_total[class_name] = len(image_files)
-
-    # Print per-class results
-    print("\n Per-Class Accuracy:")
-    print("-" * 50)
-    per_class_accuracies = {}
-    for class_name in CLASS_NAMES:
-        total = per_class_total[class_name]
-        correct = per_class_correct[class_name]
-        if total > 0:
-            acc = 100 * correct / total
-            per_class_accuracies[class_name] = acc
-            bar = "[" + "#" * int(acc / 5) + "-" * (20 - int(acc / 5)) + "]"
-            print(f"   {class_name:20s} {bar} {acc:5.1f}% ({correct}/{total})")
-
-    # Print overall results
-    overall_acc = 100 * total_correct / total_images if total_images > 0 else 0
-    avg_disagreement = (
-        sum(all_disagreements) / len(all_disagreements) if all_disagreements else 0
-    )
-    avg_agreement = (
-        sum(all_agreement_ratios) / len(all_agreement_ratios)
-        if all_agreement_ratios
-        else 0
+    """Wrapper to run modular evaluation and report results."""
+    result = evaluate_ensemble_dataset(
+        models=models,
+        model_names=model_names,
+        data_dir=data_dir,
+        device=device,
+        split=split,
+        progress_bar=True,
     )
 
-    print("\n" + "-" * 50)
-    print(
-        f"Overall Ensemble Accuracy: {overall_acc:.2f}% ({total_correct}/{total_images})"
+    report_and_log_results(
+        result=result,
+        model_names=model_names,
+        wandb_enabled=wandb_enabled,
+        wandb_project=wandb_project,
+        split=split,
+        data_dir=str(data_dir),
     )
-    print(f"Average Disagreement:      {avg_disagreement:.4f}")
-    print(f"Average Agreement Ratio:   {avg_agreement * 100:.1f}%")
 
-    # Get individual model accuracies for comparison
-    individual_accs = {}
-    print("\n Model Comparison:")
-    print("-" * 50)
-    for name in model_names:
-        # Get individual model accuracy from checkpoint
-        # Handle seed variants by looking for the exact file name if possible,
-        # but here we try to find the match within the provided checkpoint_dir
-        pattern = f"best_{name}.pth"
-        checkpoint_path = checkpoint_dir / pattern
-
-        if checkpoint_path.exists():
-            ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
-            individual_acc = ckpt.get("val_acc", 0)
-            individual_accs[name] = individual_acc
-            print(f"   {name:25s} {individual_acc:.2f}%")
-        else:
-            # Fallback for seed-specific filenames if exact match not found
-            alt_paths = list(checkpoint_dir.glob(f"best_{name}_seed*.pth"))
-            if alt_paths:
-                checkpoint_path = alt_paths[0]
-                ckpt = torch.load(
-                    checkpoint_path, map_location=device, weights_only=False
-                )
-                individual_acc = ckpt.get("val_acc", 0)
-                individual_accs[name] = individual_acc
-                print(
-                    f"   {name:25s} {individual_acc:.2f}% (from {checkpoint_path.name})"
-                )
-            else:
-                print(f"   {name:25s} [Accuracy not found in {checkpoint_dir}]")
-
-    print(f"   {'ENSEMBLE':25s} {overall_acc:.2f}% *")
-
-    # Log to W&B
-    if wandb_enabled and WANDB_AVAILABLE:
-        # Log summary metrics
-        wandb.log(
-            {
-                "ensemble/accuracy": overall_acc,
-                "ensemble/avg_disagreement": avg_disagreement,
-                "ensemble/avg_agreement_ratio": avg_agreement * 100,
-                "ensemble/total_images": total_images,
-                "ensemble/num_models": len(models),
-            }
-        )
-
-        # Log per-class accuracy table
-        class_table = wandb.Table(
-            columns=["class", "accuracy", "correct", "total"],
-            data=[
-                [
-                    cls,
-                    per_class_accuracies.get(cls, 0),
-                    per_class_correct[cls],
-                    per_class_total[cls],
-                ]
-                for cls in CLASS_NAMES
-            ],
-        )
-        wandb.log({"ensemble/per_class_accuracy": class_table})
-
-        # Log model comparison
-        model_table = wandb.Table(
-            columns=["model", "accuracy", "is_ensemble"],
-            data=[[name, acc, False] for name, acc in individual_accs.items()]
-            + [["ENSEMBLE", overall_acc, True]],
-        )
-        wandb.log({"ensemble/model_comparison": model_table})
-
-        # Log disagreement histogram
-        wandb.log(
-            {
-                "ensemble/disagreement_histogram": wandb.Histogram(all_disagreements),
-                "ensemble/agreement_histogram": wandb.Histogram(all_agreement_ratios),
-            }
-        )
-
-        # Summary metrics for quick view in run list
-        wandb.run.summary["ensemble/accuracy"] = overall_acc
-        wandb.run.summary["ensemble/avg_disagreement"] = avg_disagreement
-        wandb.run.summary["ensemble/avg_agreement_ratio"] = avg_agreement * 100
-
-        if individual_accs:
-            best_single = max(individual_accs.values())
-            improvement = overall_acc - best_single
-            wandb.run.summary["ensemble/improvement_over_best_single"] = improvement
-            wandb.run.summary["ensemble/best_single_accuracy"] = best_single
-
-        wandb.finish()
-        print("\n   W&B logging complete!")
-
-    return overall_acc
+    return result.overall_accuracy
 
 
 def main():

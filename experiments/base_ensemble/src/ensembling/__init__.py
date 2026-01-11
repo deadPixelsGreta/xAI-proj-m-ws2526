@@ -5,6 +5,7 @@ from .inference import (
     run_inference,
     EnsembleResult,
 )
+from .evaluation import evaluate_ensemble_dataset, EvaluationResult
 
 __all__ = [
     "ensemble_predict",
@@ -12,4 +13,6 @@ __all__ = [
     "get_top_predictions",
     "run_inference",
     "EnsembleResult",
+    "evaluate_ensemble_dataset",
+    "EvaluationResult",
 ]
