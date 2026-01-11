@@ -11,7 +11,9 @@ from torchvision import models
 # Supported model architectures
 SUPPORTED_MODELS = [
     "densenet121",
+    "resnet18",
     "resnet34",
+    "resnet50",
     "efficientnet_b0",
     "vit_b_16",
     "resnet34_robust",
@@ -38,11 +40,25 @@ def create_model(
         # DenseNet uses `classifier` which is a linear layer
         model.classifier = nn.Linear(model.classifier.in_features, num_classes)
 
+    elif model_name == "resnet18":
+        if pretrained:
+            model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+        else:
+            model = models.resnet18(weights=None)
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
+
     elif model_name == "resnet34":
         if pretrained:
             model = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1)
         else:
             model = models.resnet34(weights=None)
+        model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+    elif model_name == "resnet50":
+        if pretrained:
+            model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+        else:
+            model = models.resnet50(weights=None)
         model.fc = nn.Linear(model.fc.in_features, num_classes)
 
     elif model_name == "efficientnet_b0":
