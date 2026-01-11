@@ -2,6 +2,7 @@ import argparse
 import sys
 import yaml
 import torch
+import wandb
 from pathlib import Path
 
 # Add project root to path
@@ -26,21 +27,37 @@ from experiments.SEDGE.training.console_ui import (
 
 
 def parse_args():
+    # 1. First pass: only parse --config
+    early_parser = argparse.ArgumentParser(add_help=False)
+    early_parser.add_argument("--config", type=str, default=None)
+    args_early, _ = early_parser.parse_known_args()
+
+    # 2. Load config if provided
+    cfg = {}
+    if args_early.config:
+        with open(args_early.config, "r") as f:
+            cfg = yaml.safe_load(f)
+
+    # Helper to get nested values from cfg
+    def get_cfg(section, key, default):
+        return cfg.get(section, {}).get(key, default)
+
+    # 3. Main parser with defaults from config
     parser = argparse.ArgumentParser(
         description="Train SEDGE model with frozen pretrained backbones"
     )
-    parser.add_argument("--config", type=str, default=None, help="Path to YAML config")
-    parser.add_argument("--data-dir", type=str, default="ImageNetSubset")
+    parser.add_argument("--config", type=str, default=args_early.config, help="Path to YAML config")
+    parser.add_argument("--data-dir", type=str, default=get_cfg("data", "data_dir", "ImageNetSubset"))
     parser.add_argument(
         "--backbones",
         type=str,
         nargs="+",
-        default=DEFAULT_BACKBONES,
-        help="List of backbone names to use (e.g., resnet34 densenet121 efficientnet_b0 vit_b_16)",
+        default=get_cfg("model", "backbones", DEFAULT_BACKBONES),
+        help="List of backbone names to use",
     )
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--epochs", type=int, default=get_cfg("training", "epochs", 10))
+    parser.add_argument("--lr", type=float, default=get_cfg("training", "lr", 1e-3))
+    parser.add_argument("--batch-size", type=int, default=get_cfg("training", "batch_size", 32))
     parser.add_argument(
         "--save-path",
         type=str,
@@ -49,21 +66,35 @@ def parse_args():
     parser.add_argument(
         "--num-workers",
         type=int,
-        default=0,
+        default=get_cfg("training", "num_workers", 0),
         help="Number of data loader workers",
     )
     parser.add_argument(
         "--pin-memory",
         action="store_true",
-        help="Enable pin_memory in DataLoaders (recommended for CUDA)",
+        default=get_cfg("training", "pin_memory", False),
+        help="Enable pin_memory in DataLoaders",
     )
     parser.add_argument(
         "--checkpoint-dir",
         type=str,
-        default=None,
-        help="Path to directory with fine-tuned checkpoints (e.g., experiments/base_ensemble/checkpoints). If not provided, uses ImageNet pretrained weights.",
+        default=get_cfg("model", "backbone_checkpoint_dir", None),
+        help="Path to directory with fine-tuned checkpoints",
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--proxy-ood",
+        action="store_true",
+        default=get_cfg("training", "proxy_ood", True),
+        help="Enable Proxy-OOD augmentations for training and validation",
+    )
+    parser.add_argument(
+        "--adapter-tuning",
+        action="store_true",
+        default=get_cfg("training", "adapter_tuning", False),
+        help="Unfreeze the classification heads (Linear Probing/Adapter Tuning)",
+    )
+    
+    return parser.parse_args(), cfg
 
 
 def count_trainable_params(model: torch.nn.Module) -> int:
@@ -77,37 +108,37 @@ def count_frozen_params(model: torch.nn.Module) -> int:
 
 
 def main():
-    args = parse_args()
+    args, cfg = parse_args()
 
-    # Load config if provided
-    cfg = {}
-    if args.config:
-        with open(args.config, "r") as f:
-            cfg = yaml.safe_load(f)
+    # Initialize wandb
+    # If run in a sweep, this will pick up the run ID and config
+    wandb.init(project="SEDGE-Training")
 
-        # Override args with config values
-        tr = cfg.get("training", {})
-        if "lr" in tr:
-            args.lr = float(tr["lr"])
-        if "batch_size" in tr:
-            args.batch_size = int(tr["batch_size"])
-        if "epochs" in tr:
-            args.epochs = int(tr["epochs"])
-        if "num_workers" in tr:
-            args.num_workers = int(tr["num_workers"])
+    # Enable TF32 for Ampere GPUs (like RTX A4000)
+    if torch.cuda.is_available():
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
 
-        dd = cfg.get("data", {})
-        if "data_dir" in dd:
-            args.data_dir = str(dd["data_dir"])
-
-        md = cfg.get("model", {})
-        if "backbones" in md:
-            args.backbones = md["backbones"]
-        # Load checkpoint_dir from config if not specified via CLI
-        if args.checkpoint_dir is None and "backbone_checkpoint_dir" in md:
-            checkpoint_dir = md["backbone_checkpoint_dir"]
-            if checkpoint_dir:  # Only set if not null/None
-                args.checkpoint_dir = str(checkpoint_dir)
+    # 3. Override with WandB sweep parameters if available
+    # This is crucial for sweeps to work!
+    if wandb.config:
+        # Map flat wandb.config to our nested structure or args
+        if "lr" in wandb.config:
+            args.lr = wandb.config.lr
+        if "batch_size" in wandb.config:
+            args.batch_size = wandb.config.batch_size
+        if "epochs" in wandb.config:
+            args.epochs = wandb.config.epochs
+        if "adapter_tuning" in wandb.config:
+            args.adapter_tuning = wandb.config.adapter_tuning
+        
+        # Merge other wandb.config into cfg for the trainer
+        for key, value in wandb.config.items():
+            if key in ["lr", "batch_size", "epochs"]:
+                continue
+            if "training" not in cfg:
+                cfg["training"] = {}
+            cfg["training"][key] = value
 
     device = get_device()
     num_classes = 10  # ImageNetSubset
@@ -163,11 +194,18 @@ def main():
 
     print()  # Spacing before downloads
 
+    # Unfreeze heads if adapter-tuning is enabled
     backbones, feature_dims = create_all_backbones(
-        args.backbones, num_classes, device, checkpoint_dir=args.checkpoint_dir
+        args.backbones,
+        num_classes,
+        device,
+        checkpoint_dir=args.checkpoint_dir,
+        unfreeze_heads=args.adapter_tuning,
     )
 
     ConsoleUI.success(f"All {len(backbones)} backbones loaded successfully!")
+    if args.adapter_tuning:
+        ConsoleUI.info(color("Adapter Tuning Enabled: Backbone heads are trainable", Colors.BRIGHT_YELLOW))
 
     # ═══════════════════════════════════════════════════════════════════════
     # Build Model
@@ -178,6 +216,13 @@ def main():
     model_conf = cfg.get("model", {})
     router_dims = model_conf.get("router_hidden_dims", [64, 32])
     top_k = model_conf.get("top_k", 0)
+
+    # Override with sweep parameters if present
+    if wandb.config:
+        if "router_hidden_dim_1" in wandb.config and "router_hidden_dim_2" in wandb.config:
+            router_dims = [wandb.config.router_hidden_dim_1, wandb.config.router_hidden_dim_2]
+        if "top_k" in wandb.config:
+            top_k = wandb.config.top_k
 
     # Create SEDGE model
     feature_extractor = ImageFeatureExtractor()
@@ -220,12 +265,14 @@ def main():
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         pin_memory=args.pin_memory,
+        proxy_ood=args.proxy_ood,
     )
 
     ConsoleUI.key_value("Training Batches", len(train_loader))
     ConsoleUI.key_value("Validation Batches", len(val_loader))
     ConsoleUI.key_value("Training Samples", len(train_loader.dataset))
     ConsoleUI.key_value("Validation Samples", len(val_loader.dataset))
+    ConsoleUI.key_value("Proxy-OOD Enabled", color(str(args.proxy_ood), Colors.GREEN if args.proxy_ood else Colors.YELLOW))
 
     # ═══════════════════════════════════════════════════════════════════════
     # Configure Trainer

@@ -38,6 +38,7 @@ def evaluate_ensemble_dataset(
     split: str = "val",
     class_names: Optional[List[str]] = None,
     progress_bar: bool = True,
+    weights: Optional[List[float]] = None,
 ) -> EvaluationResult:
     """Evaluate ensemble on a dataset split and return comprehensive metrics."""
     if class_names is None:
@@ -88,7 +89,7 @@ def evaluate_ensemble_dataset(
         # Load and predict
         image_tensor = load_image(image_path, transform)
         result = ensemble_predict_extended(
-            models, model_names, image_tensor, device, class_names
+            models, model_names, image_tensor, device, class_names, weights=weights
         )
 
         # Ensemble prediction index

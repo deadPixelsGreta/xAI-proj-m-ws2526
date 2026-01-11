@@ -81,6 +81,23 @@ def get_val_transform() -> transforms.Compose:
     )
 
 
+def get_proxy_ood_transform() -> transforms.Compose:
+    """Return validation transforms with 'Proxy-OOD' augmentations.
+    Used for Domain Generalization tuning without using the test set.
+    """
+    return transforms.Compose(
+        [
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+            transforms.RandomGrayscale(p=0.1),
+            transforms.GaussianBlur(kernel_size=3),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+        ]
+    )
+
+
 def create_data_loaders(
     data_dir: str,
     batch_size: int = 32,
@@ -88,6 +105,7 @@ def create_data_loaders(
     pin_memory: bool = True,
     sota_aug: bool = True,
     robust_aug: bool = False,
+    proxy_ood: bool = False,
 ) -> Tuple[DataLoader, DataLoader, int]:
     """Create data loaders from an ImageFolder layout under data_dir/train and data_dir/val.
 
@@ -96,13 +114,18 @@ def create_data_loaders(
     train_dir = os.path.join(data_dir, "train")
     val_dir = os.path.join(data_dir, "val")
 
-    if robust_aug:
-        transform = get_robust_transform()
+    if proxy_ood:
+        train_transform = get_robust_transform()
+        val_transform = get_proxy_ood_transform()
+    elif robust_aug:
+        train_transform = get_robust_transform()
+        val_transform = get_val_transform()
     else:
-        transform = get_train_transform(sota=sota_aug)
+        train_transform = get_train_transform(sota=sota_aug)
+        val_transform = get_val_transform()
 
-    train_dataset = datasets.ImageFolder(train_dir, transform=transform)
-    val_dataset = datasets.ImageFolder(val_dir, transform=get_val_transform())
+    train_dataset = datasets.ImageFolder(train_dir, transform=train_transform)
+    val_dataset = datasets.ImageFolder(val_dir, transform=val_transform)
 
     # persistent_workers=True is recommended for training in environments like Colab
     # to avoid the overhead of re-creating worker processes every epoch.

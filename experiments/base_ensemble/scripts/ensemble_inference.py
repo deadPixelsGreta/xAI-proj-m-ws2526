@@ -3,6 +3,7 @@
 
 import argparse
 import sys
+import torch
 from pathlib import Path
 from typing import List, Optional
 
@@ -56,10 +57,35 @@ def parse_args():
         action="store_true",
         help="Evaluate ensemble on entire validation set",
     )
+    parser.add_argument(
+        "--eval-individuals",
+        "--eval_individuals",
+        action="store_true",
+        help="Evaluate individual models along with ensemble on the target set (for fair comparison)",
+    )
 
     # Model arguments
     parser.add_argument(
         "--checkpoints", nargs="+", default=None, help="Paths to model checkpoint files"
+    )
+    parser.add_argument(
+        "--weighted",
+        action="store_true",
+        help="Use weighted averaging instead of simple mean. "
+        "Weights are taken from --weights or automatically from checkpoint validation accuracy.",
+    )
+    parser.add_argument(
+        "--weights",
+        nargs="+",
+        type=float,
+        default=None,
+        help="Manual weights for each model (must match number of checkpoints)",
+    )
+    parser.add_argument(
+        "--weight-power",
+        type=float,
+        default=1.0,
+        help="Power to raise weights to before normalization (higher values amplify the best model)",
     )
 
     # Output arguments
@@ -206,6 +232,8 @@ def evaluate_ensemble(
     split="val",
     wandb_enabled=True,
     wandb_project=None,
+    eval_individuals=False,
+    weights=None,
 ):
     """Wrapper to run modular evaluation and report results."""
     result = evaluate_ensemble_dataset(
@@ -215,6 +243,7 @@ def evaluate_ensemble(
         device=device,
         split=split,
         progress_bar=True,
+        weights=weights,
     )
 
     report_and_log_results(
@@ -262,11 +291,47 @@ def main():
     # Load models
     models = []
     model_names = []
+    val_accs = []
     for path in checkpoint_paths:
         model, name, val_acc = load_checkpoint(path, device)
         models.append(model)
         model_names.append(name)
+        val_accs.append(val_acc)
         print(f"   ✓ {name:20s} (val acc: {val_acc:.1f}%) from {Path(path).name}")
+
+    # Process weights if requested
+    weights = None
+    if args.weighted:
+        if args.weights:
+            if len(args.weights) != len(models):
+                print(
+                    f"Error: Number of weights ({len(args.weights)}) does not match number of models ({len(models)})"
+                )
+                sys.exit(1)
+            weights = args.weights
+        else:
+            # Automatic weighting from checkpoint validation accuracy
+            # Normalize to 0-1 range if they are percentages (common)
+            raw_weights = torch.tensor(val_accs, dtype=torch.float32)
+            if raw_weights.max() > 1.0:
+                raw_weights = raw_weights / 100.0
+
+            if args.weight_power != 1.0:
+                # Apply power transformation to amplify differences in [0, 1] range
+                # This makes the "best" model much more dominant without hitting 'inf'
+                transformed = torch.pow(raw_weights, args.weight_power)
+                weights = transformed.tolist()
+                print(
+                    f"\n   Applying weight-power {args.weight_power} (normalized to [0,1]):"
+                )
+                for name, w in zip(model_names, weights):
+                    print(f"     {name:25s}: {w:.4f}")
+            else:
+                weights = raw_weights.tolist()
+
+            print(
+                f"\n   Using automatic weights based on val_acc: {[round(w, 4) for w in weights]}"
+            )
 
     # Run evaluation mode
     if args.evaluate:
@@ -279,6 +344,8 @@ def main():
             split=args.split,
             wandb_enabled=args.wandb,
             wandb_project=args.wandb_project,
+            eval_individuals=args.eval_individuals,
+            weights=weights,
         )
 
     # Single image inference
@@ -291,6 +358,7 @@ def main():
             top_k=args.top_k,
             show_individual=args.show_individual,
             show_diagnostics=not args.no_diagnostics,
+            weights=weights,
         )
 
     # Directory inference
@@ -322,6 +390,7 @@ def main():
                 top_k=args.top_k,
                 show_individual=args.show_individual,
                 show_diagnostics=not args.no_diagnostics,
+                weights=weights,
             )
 
             if ground_truth:

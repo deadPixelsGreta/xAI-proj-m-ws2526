@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import wandb
 from typing import Dict
 from tqdm import tqdm
 
@@ -29,6 +30,7 @@ class SEDGETrainer:
         self.val_loader = val_loader
         self.device = device
         self.config = config
+        self.avg_entropy = 0.0 # Track router entropy
 
         self.optimizer = optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
@@ -104,6 +106,11 @@ class SEDGETrainer:
             reg = self.compute_entropy_reg(routing_weights)
             total_loss = loss + reg
 
+            # Track average entropy for logging
+            with torch.no_grad():
+                entropy = -torch.mean(torch.sum(routing_weights * torch.log(routing_weights + 1e-8), dim=1))
+                self.avg_entropy = 0.9 * self.avg_entropy + 0.1 * entropy.item()
+
             total_loss.backward()
             self.optimizer.step()
 
@@ -169,6 +176,18 @@ class SEDGETrainer:
             ConsoleUI.epoch_summary(
                 train_loss, train_acc, val_loss, val_acc, epoch_time, is_best=is_best
             )
+
+            # Log to wandb
+            wandb.log({
+                "epoch": epoch + 1,
+                "train_loss": train_loss,
+                "train_acc": train_acc,
+                "val_loss": val_loss,
+                "val_acc": val_acc,
+                "router_entropy": self.avg_entropy,
+                "is_best": is_best,
+                "lr": self.lr
+            })
 
             # ETA estimate
             eta = self.timer.eta(epochs_completed, epochs)

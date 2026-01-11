@@ -100,6 +100,14 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate SEDGE model")
     parser.add_argument("--sedge-checkpoint", type=str, required=True)
     parser.add_argument("--data-dir", type=str, default="ImageNetSubset")
+    parser.add_argument(
+        "--split",
+        type=str,
+        default="test",
+        choices=["val", "test"],
+        help="Split to evaluate on",
+    )
+    parser.add_argument("--batch-size", type=int, default=64)
     args = parser.parse_args()
 
     device = get_device()
@@ -151,21 +159,20 @@ def main():
     sedge_model.load_state_dict(checkpoint["model_state_dict"])
     print("  All weights loaded from SEDGE checkpoint!")
 
-    # 5. Evaluate across suites
-    print("\n--- Evaluating on Clean Data ---")
-    _, val_loader, _ = create_data_loaders(args.data_dir)
-    evaluate(sedge_model, val_loader, device, "Clean Val")
+    # 5. Evaluate on selected split
+    print(f"\n--- Evaluating on {args.split.capitalize()} Data ---")
 
-    # Note: Synthetic and Phone-Photo suites would require specific directory layouts
-    # or specific test loaders.
-    try:
-        print("\n--- Evaluating on Phone-Photo Data ---")
-        phone_loader = create_test_loader(
-            args.data_dir
-        )  # Assuming 'test' folder is phones
-        evaluate(sedge_model, phone_loader, device, "Phone-Photo")
-    except Exception as e:
-        print(f"Skipping Phone-Photo evaluation: {e}")
+    if args.split == "test":
+        loader = create_test_loader(
+            args.data_dir, batch_size=args.batch_size
+        )
+        evaluate(sedge_model, loader, device, "Test Set")
+    else:
+        # Use simple loader for val split
+        _, loader, _ = create_data_loaders(
+            args.data_dir, batch_size=args.batch_size, proxy_ood=False
+        )
+        evaluate(sedge_model, loader, device, "Clean Val")
 
     wandb.finish()
     print("\nWandB logging complete!")

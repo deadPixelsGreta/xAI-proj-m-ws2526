@@ -42,13 +42,15 @@ def create_frozen_backbone(
     name: str,
     num_classes: int,
     device: torch.device = None,
+    unfreeze_head: bool = False,
 ) -> Tuple[nn.Module, int]:
     """
-    Create a frozen pretrained backbone with its classifier replaced.
+    Create a backbone with its classifier replaced.
+    By default, all parameters are frozen. If unfreeze_head is True,
+    the classification head is left trainable.
 
     Returns:
-        Tuple of (model, feature_dim) where feature_dim is the input size
-        to the original classifier (useful for adapters).
+        Tuple of (model, feature_dim)
     """
     name = name.lower()
     if name not in BACKBONE_CONFIGS:
@@ -62,26 +64,47 @@ def create_frozen_backbone(
     model = config["model_fn"](weights=config["weights"])
 
     # Replace classifier head with identity or simple projection to num_classes
-    # For SEDGE, we keep the original classifier since adapters sit on top
-    # But we need to ensure output is num_classes
     if name == "resnet34":
         model.fc = nn.Linear(config["num_features"], num_classes)
+        head_params = model.fc
     elif name == "densenet121":
         model.classifier = nn.Linear(config["num_features"], num_classes)
+        head_params = model.classifier
     elif name == "efficientnet_b0":
         model.classifier[1] = nn.Linear(config["num_features"], num_classes)
+        head_params = model.classifier[1]
     elif name == "vit_b_16":
         model.heads[0] = nn.Linear(config["num_features"], num_classes)
+        head_params = model.heads[0]
 
-    # Freeze all parameters
-    for param in model.parameters():
-        param.requires_grad = False
+    # Freeze all parameters first
+    model.requires_grad_(False)
+
+    # Unfreeze only the head (and last block) if requested
+    if unfreeze_head:
+        # 1. Unfreeze the head
+        head_params.requires_grad_(True)
+            
+        # 2. Unfreeze the last major block for better feature alignment
+        if name == "resnet34":
+            model.layer4.requires_grad_(True)
+        elif name == "densenet121":
+            model.features.denseblock4.requires_grad_(True)
+            model.features.norm5.requires_grad_(True)
+        elif name == "efficientnet_b0":
+            # Last two blocks of efficientnet_b0
+            model.features[7].requires_grad_(True)
+            model.features[8].requires_grad_(True)
+        elif name == "vit_b_16":
+            # Last encoder layer
+            model.encoder.layers[-1].requires_grad_(True)
 
     # Move to device
     if device is not None:
         model = model.to(device)
 
-    model.eval()  # Set to eval mode since we're not training it
+    if not unfreeze_head:
+        model.eval()  # Only set to eval if completely frozen
 
     return model, config["num_features"]
 
@@ -172,9 +195,10 @@ def create_all_backbones(
     num_classes: int,
     device: torch.device = None,
     checkpoint_dir: Optional[str] = None,
+    unfreeze_heads: bool = False,
 ) -> Tuple[List[nn.Module], List[int]]:
     """
-    Create all frozen backbones.
+    Create all backbones.
 
     If checkpoint_dir is provided, attempts to load fine-tuned checkpoints.
     Falls back to ImageNet pretrained weights if checkpoint not found.
@@ -184,6 +208,7 @@ def create_all_backbones(
         num_classes: Number of output classes
         device: Device to load models onto
         checkpoint_dir: Optional path to directory containing checkpoints
+        unfreeze_heads: Whether to allow training of the classification heads
 
     Returns:
         Tuple of (list of models, list of feature dimensions)
@@ -208,7 +233,9 @@ def create_all_backbones(
             source = f"checkpoint: {Path(checkpoint_path).name}"
         else:
             # Fall back to ImageNet pretrained
-            model, feat_dim = create_frozen_backbone(name, num_classes, device)
+            model, feat_dim = create_frozen_backbone(
+                name, num_classes, device, unfreeze_head=unfreeze_heads
+            )
             if checkpoint_dir:
                 source = "ImageNet pretrained (no checkpoint found)"
 
