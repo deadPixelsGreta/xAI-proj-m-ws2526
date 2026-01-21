@@ -156,6 +156,16 @@ def main():
             args.num_workers = int(tr["num_workers"])
         if "early_stopping_patience" in tr and not cli_overrides("--patience"):
             args.early_stopping_patience = int(tr["early_stopping_patience"])
+        if "amp" in tr and not cli_overrides("--amp"):
+            args.amp = bool(tr["amp"])
+        if "grad_clip" in tr and not cli_overrides("--grad-clip", "--grad_clip"):
+            args.grad_clip = float(tr["grad_clip"])
+        if "accum_steps" in tr and not cli_overrides("--accum-steps", "--accum_steps"):
+            args.accum_steps = int(tr["accum_steps"])
+        if "scheduler" in tr and not cli_overrides("--scheduler"):
+            args.scheduler = str(tr["scheduler"])
+        if "label_smoothing" in tr and not cli_overrides("--label-smoothing", "--label_smoothing"):
+            args.label_smoothing = float(tr["label_smoothing"])
 
         # model section
         md = cfg.get("model", {})
