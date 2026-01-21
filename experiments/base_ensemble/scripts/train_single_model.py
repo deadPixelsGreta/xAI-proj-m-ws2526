@@ -103,6 +103,13 @@ def parse_args():
         action="store_true",
         help="Disable SOTA data augmentation (TrivialAugmentWide, Mixup, Cutmix)",
     )
+    parser.add_argument(
+        "--aug-policy",
+        type=str,
+        default=None,
+        choices=["blur", "color", "geometric", "vit"],
+        help="Augmentation policy for diversity: blur, color, geometric, or vit (overrides --no-sota if set)",
+    )
 
     # Wandb arguments
     add_wandb_args(parser)
@@ -238,6 +245,7 @@ def main():
     # Create data loaders
     # Automatically enable robust augmentation if model is resnet34_robust
     robust_aug = args.robust or args.model == "resnet34_robust"
+    aug_policy = args.aug_policy
 
     train_loader, val_loader, num_classes = create_data_loaders(
         args.data_dir,
@@ -245,6 +253,7 @@ def main():
         args.num_workers,
         sota_aug=not args.no_sota,
         robust_aug=robust_aug,
+        aug_policy=aug_policy,
     )
 
     # Create model
@@ -271,6 +280,7 @@ def main():
         "accum_steps": args.accum_steps,
         "scheduler": args.scheduler,
         "label_smoothing": args.label_smoothing,
+        "aug_policy": aug_policy,
     }
     config = TrainingConfig.from_dict(config_dict)
 
@@ -292,10 +302,12 @@ def main():
     }
 
     # Train
-    # Include seed in model name for checkpoint differentiation
+    # Include seed and augmentation policy in model name for checkpoint differentiation
     model_save_name = args.model
+    if args.aug_policy is not None:
+        model_save_name = f"{args.model}_{args.aug_policy}"
     if args.seed is not None:
-        model_save_name = f"{args.model}_seed{args.seed}"
+        model_save_name = f"{model_save_name}_seed{args.seed}"
 
     results = train(
         model=model,
