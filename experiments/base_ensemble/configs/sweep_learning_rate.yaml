@@ -1,13 +1,16 @@
 # WandB Sweep: Fixed Augmentation Policies + Bayes LR Optimization
 # This sweep fixes model+policy pairs and optimizes learning rate using Bayesian optimization
 # 
-# Initialize one of these 4 sweeps:
-#   wandb sweep --project xAI-proj-m-ws2526_SP experiments/base_ensemble/configs/sweep_learning_rate.yaml --set model=resnet34,aug_policy=color
-#   wandb sweep --project xAI-proj-m-ws2526_SP experiments/base_ensemble/configs/sweep_learning_rate.yaml --set model=efficientnet_b0,aug_policy=blur
-#   wandb sweep --project xAI-proj-m-ws2526_SP experiments/base_ensemble/configs/sweep_learning_rate.yaml --set model=densenet121,aug_policy=geometric
-#   wandb sweep --project xAI-proj-m-ws2526_SP experiments/base_ensemble/configs/sweep_learning_rate.yaml --set model=vit_b_16,aug_policy=geometric
+# To use a specific model and policy, edit the 'model' and 'aug_policy' values below
+# and then run: wandb sweep --project xAI-proj-m-ws2526_SP experiments/base_ensemble/configs/sweep_learning_rate.yaml
 
 program: experiments/base_ensemble/scripts/train_single_model.py
+command:
+  - ${env}
+  - python
+  - -m
+  - experiments.base_ensemble.scripts.train_single_model
+  - ${args}
 method: bayes
 metric:
   name: best_val_accuracy

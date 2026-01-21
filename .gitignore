@@ -216,3 +216,4 @@ experiments/checkpoints/*.pth
 
 
 .github/*
+wandb/*

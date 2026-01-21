@@ -21,8 +21,8 @@ def setup_path():
                 sys.path.insert(0, str(project_root))
             return project_root
 
-    # Fallback: use parent's parent (scripts -> experiments -> project root)
-    project_root = (current.parent.parent).resolve()
+    # Fallback: use parent's parent's parent (scripts -> base_ensemble -> experiments -> project root)
+    project_root = (current.parent.parent.parent).resolve()
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
     return project_root

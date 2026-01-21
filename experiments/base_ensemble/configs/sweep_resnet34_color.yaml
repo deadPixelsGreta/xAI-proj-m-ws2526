@@ -3,6 +3,12 @@
 # Run agent: wandb agent <SWEEP_ID>
 
 program: experiments/base_ensemble/scripts/train_single_model.py
+command:
+  - ${env}
+  - python
+  - -m
+  - experiments.base_ensemble.scripts.train_single_model
+  - ${args}
 method: bayes
 metric:
   name: best_val_accuracy
@@ -11,27 +17,21 @@ metric:
 parameters:
   config:
     value: experiments/base_ensemble/configs/default.yaml
-  data_dir:
-    value: datasets
+  data-dir:
+    value: C:\Users\ba081274\Downloads\ImageNetSubset
   epochs:
     value: 30
   batch_size:
     value: 32
   seed:
     value: 42
-  wandb:
-    value: true
-  no_sota:
-    value: false
   scheduler:
     value: cosine
-  label_smoothing:
-    value: 0.1
   
   # Fixed: ResNet34 + Color
   model:
     value: resnet34
-  aug_policy:
+  aug-policy:
     value: color
   
   # Bayes optimization: Learning rate

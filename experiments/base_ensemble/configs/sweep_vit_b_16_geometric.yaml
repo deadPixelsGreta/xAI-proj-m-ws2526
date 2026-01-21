@@ -3,6 +3,12 @@
 # Run agent: wandb agent <SWEEP_ID>
 
 program: experiments/base_ensemble/scripts/train_single_model.py
+command:
+  - ${env}
+  - python
+  - -m
+  - experiments.base_ensemble.scripts.train_single_model
+  - ${args}
 method: bayes
 metric:
   name: best_val_accuracy
@@ -19,19 +25,13 @@ parameters:
     value: 32
   seed:
     value: 42
-  wandb:
-    value: true
-  no_sota:
-    value: false
   scheduler:
     value: cosine
-  label_smoothing:
-    value: 0.1
   
   # Fixed: ViT-B-16 + Geometric
   model:
     value: vit_b_16
-  aug_policy:
+  aug-policy:
     value: geometric
   
   # Bayes optimization: Learning rate
