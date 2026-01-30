@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from experiments.bagging.src.utils.checkpointing import CheckpointSaver
+from torch.amp import autocast, GradScaler
 
 try:
     import wandb
@@ -29,12 +30,15 @@ def train_one_epoch(
     device: torch.device,
     epoch: int,
     print_freq: int = 50,
+    use_amp: bool = True,
 ) -> Tuple[float, float, float]:
     """Train for one epoch and return (loss, accuracy, seconds)."""
     model.train()
     running_loss = 0.0
     correct = 0
     total = 0
+
+    scaler = GradScaler('cuda', enabled=use_amp)
 
     start_time = time.time()
 
@@ -47,10 +51,15 @@ def train_one_epoch(
         inputs, targets = inputs.to(device), targets.to(device)
 
         optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
+
+        with autocast('cuda', enabled=use_amp):  # ← Neu
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
+        
+        # Mixed precision backward pass
+        scaler.scale(loss).backward()  # ← Geändert
+        scaler.step(optimizer)  # ← Geändert
+        scaler.update()  # ← Neu
 
         running_loss += loss.item()
         _, predicted = outputs.max(1)
@@ -156,7 +165,14 @@ def train(
         momentum=config.get("momentum", 0.9),
         weight_decay=config.get("weight_decay", 1e-4),
     )
-    scheduler = StepLR(optimizer, step_size=7, gamma=0.1)
+
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, 
+        T_max=config.get("epochs", 5),
+        eta_min=config.get("lr", 0.001) * 0.01  # 1% der Start-LR
+    )
+
+    # scheduler = StepLR(optimizer, step_size=7, gamma=0.1)
 
     # Create save directory
     save_path = Path(save_dir)
@@ -177,12 +193,19 @@ def train(
         }
         init_kwargs = {k: v for k, v in init_kwargs.items() if v is not None}
 
+        # Merge config with augmentation parameters
+        full_config = {
+            **config,
+            "architecture": model_name,
+        }
+        
+        # Add augmentation parameters if available
+        if "augmentation" in wandb_config:
+            full_config.update(wandb_config["augmentation"])
+
         wandb.init(
             **init_kwargs,
-            config={
-                **config,
-                "architecture": model_name,
-            },
+            config=full_config,
         )
         wandb.watch(model, log="all", log_freq=100)
 

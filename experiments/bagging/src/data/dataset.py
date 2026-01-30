@@ -44,6 +44,8 @@ def get_resnet18_augmentation(aug_params: dict) -> list:
         ),
         transforms.RandomRotation(degrees=rotation),
         transforms.RandomGrayscale(p=0.1),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ]
 
 
@@ -61,6 +63,8 @@ def get_resnet34_augmentation(aug_params: dict) -> list:
     base = [
         transforms.RandomResizedCrop(224, scale=(0.08, 1.0)),
         transforms.RandomHorizontalFlip(p=0.5),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ]
     
     if use_trivial:
@@ -76,11 +80,14 @@ def get_resnet50_augmentation(aug_params: dict) -> list:
     num_ops = aug_params.get('num_ops', 2)
     magnitude = aug_params.get('magnitude', 9)
     use_cutout = aug_params.get('use_cutout', False)
+    cutout_size = aug_params.get('cutout_size', 32)
     
     augs = [
         transforms.RandomResizedCrop(224, scale=(0.08, 1.0)),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandAugment(num_ops=num_ops, magnitude=magnitude),
+        transforms.ToTensor(),  # ← Zuerst zu Tensor konvertieren
+        transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ]
     
     if use_cutout:
@@ -113,16 +120,7 @@ def get_train_transform(model_name: str, aug_params: Optional[dict] = None) -> t
     else:
         raise ValueError(f"Unknown model: {model_name}")
 
-    return transforms.Compose(
-         aug_transforms
-        + [
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=IMAGENET_MEAN,
-                std=IMAGENET_STD,
-            ),
-        ]
-    )
+    return transforms.Compose(aug_transforms)
 
 
 def get_val_transform() -> transforms.Compose:

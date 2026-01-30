@@ -1,12 +1,21 @@
-# program: experiments/bagging/training/train_augmentation_sweep.py
+program: python
+command:
+  - ${env}
+  - ${interpreter}
+  - -m
+  - experiments.bagging.scripts.train
+  - ${args}
 method: bayes
 metric:
   name: best_val_accuracy
   goal: maximize
 
 parameters:
-  model_name:
+  model:
     value: 'resnet50'
+
+  data_dir:
+    value: C:\Users\ba079778\Downloads\ImageNetSubset\ImageNetSubset
   
   # Advanced augmentations - Mixup/Cutout for feature-level robustness
   num_ops:
@@ -15,7 +24,7 @@ parameters:
     max: 4
   magnitude:
     distribution: int_uniform
-    min: 7
+    min: 7  
     max: 15
   use_cutout:
     values: [true, false]
@@ -33,20 +42,23 @@ parameters:
   
  # Training parameters - adjust based on your ResNet50 sweep results
   batch_size:
-    values: [32, 256] # best values from previous sweep
-  learning_rate:
-    distribution: log_uniform_values
-    min: 0.0008 # 3x smaller than best value from previous sweep 0.0023
-    max: 0.004 # 1.7x larger than best value from previous sweep
+    values: [32] # best values from previous lr-batch sweep
+  lr:
+    #distribution: log_uniform_values
+    value: 0.00023661
   weight_decay:
-    distribution: log_uniform_values
+    #distribution: log_uniform_values
     value: 0.0001
-  label_smoothing:
-    distribution: uniform
-    min: 0.1 # slightly bigger than best value from previous sweep 0.05 for generalization
-    max: 0.3 # slightly larger than best value from previous sweep 0.08 for konzistency
   epochs:
     value: 25
+
+ # WandB Logging
+  wandb:
+    value: true
+  wandb_project:
+    value: 'resnet-aug'
+  num_workers:
+    value: 8
 
 early_terminate:
   type: hyperband

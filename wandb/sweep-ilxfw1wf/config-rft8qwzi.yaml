@@ -1,0 +1,24 @@
+wandb_version: 1
+
+batch_size:
+  value: 32
+cutout_size:
+  value: 52
+epochs:
+  value: 25
+lr:
+  value: 0.0012104555409018095
+magnitude:
+  value: 12
+mixup_alpha:
+  value: 0.2148609805744313
+model_name:
+  value: resnet50
+num_ops:
+  value: 4
+use_cutout:
+  value: true
+use_mixup:
+  value: false
+weight_decay:
+  value: 0.0001
