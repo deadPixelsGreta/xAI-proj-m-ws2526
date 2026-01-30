@@ -139,7 +139,23 @@ def parse_args():
         "--seed", type=int, default=None, help="Random seed for reproducibility"
     )
 
-    # Augmentation arguments for ResNet50 (RandAugment + Cutout/Mixup)
+    # Optimizer arguments
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="sgd",
+        choices=["sgd", "adamw"],
+        help="Optimizer type (sgd or adamw)",
+    )
+    parser.add_argument(
+        "--label-smoothing",
+        "--label_smoothing",
+        type=float,
+        default=0.1,
+        help="Label smoothing factor",
+        dest="label_smoothing",
+    )
+
     parser.add_argument(
         "--num-ops",
         "--num_ops",
@@ -182,8 +198,24 @@ def parse_args():
         type=float,
         default=0.2,
         help="Alpha parameter for mixup augmentation",
+        dest="mixup_alpha",
     )
-
+    parser.add_argument(
+        "--use-cutmix",
+        "--use_cutmix",
+        type=lambda x: str(x).lower() in ['true', '1', 'yes'],
+        default=False,
+        help="Enable CutMix augmentation",
+        dest="use_cutmix",
+    )
+    parser.add_argument(
+        "--cutmix-alpha",
+        "--cutmix_alpha",
+        type=float,
+        default=1.0,
+        help="Alpha parameter for CutMix augmentation",
+        dest="cutmix_alpha",
+    )
 
     # Output arguments
     parser.add_argument(
@@ -252,6 +284,10 @@ def main():
         # freeze_backbone in yaml
         if "freeze_backbone" in tr and not cli_overrides("--freeze-backbone"):
             args.freeze_backbone = bool(tr["freeze_backbone"])
+        if "optimizer" in tr and not cli_overrides("--optimizer"):
+            args.optimizer = str(tr["optimizer"])
+        if "label_smoothing" in tr and not cli_overrides("--label-smoothing"):
+            args.label_smoothing = float(tr["label_smoothing"])
 
         # augmentation parameters in yaml
         aug = cfg.get("augmentation", {})
@@ -370,6 +406,10 @@ def main():
         "early_stopping_thresh": args.early_stopping_thresh,
         "top_n_checkpoints": args.top_n_checkpoints,
         "freeze_backbone": args.freeze_backbone,
+        "optimizer": args.optimizer,
+        "label_smoothing": args.label_smoothing,
+        "use_cutmix": args.use_cutmix,
+        "cutmix_alpha": args.cutmix_alpha,
     }
 
     print(f"\n Training Configuration:")

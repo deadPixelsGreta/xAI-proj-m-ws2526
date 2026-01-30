@@ -83,15 +83,29 @@ def get_resnet50_augmentation(aug_params: dict) -> list:
     cutout_size = aug_params.get('cutout_size', 32)
     
     augs = [
-        transforms.RandomResizedCrop(224, scale=(0.08, 1.0)),
+        transforms.RandomResizedCrop(224, scale=(0.08, 1.0), ratio=(0.75, 1.33)),
         transforms.RandomHorizontalFlip(p=0.5),
+
+        transforms.RandomApply([
+            transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
+        ], p=0.8),
+    
+        transforms.RandomGrayscale(p=0.2),
+
         transforms.RandAugment(num_ops=num_ops, magnitude=magnitude),
         transforms.ToTensor(),  # ← Zuerst zu Tensor konvertieren
         transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ]
     
     if use_cutout:
-        augs.append(transforms.RandomErasing(p=0.25, scale=(0.02, 0.33)))
+        augs.append(
+            transforms.RandomErasing(
+                p=0.5, 
+                scale=(0.02, 0.33),
+                ratio=(0.3, 3.3),
+                value='random',
+            )
+        )
     
     return augs
 
