@@ -30,6 +30,7 @@ def train_one_epoch(
     optimizer: optim.Optimizer,
     device: torch.device,
     epoch: int,
+    scheduler: Optional[optim.lr_scheduler._LRScheduler] = None,
     use_cutmix: bool = False,
     cutmix_alpha: float = 1.0,
     print_freq: int = 50,
@@ -71,6 +72,9 @@ def train_one_epoch(
         scaler.scale(loss).backward()  
         scaler.step(optimizer)  
         scaler.update()  
+
+        if scheduler is not None:
+            scheduler.step()
 
         running_loss += loss.item()
         _, predicted = outputs.max(1)
@@ -191,7 +195,7 @@ def train(
     # tryout OneCycleLR scheduler
     scheduler = optim.lr_scheduler.OneCycleLR(
         optimizer,
-        max_lr=config.get("lr", 0.001) * 10,
+        max_lr=config.get("lr", 0.001) * 3,
         epochs=config.get("epochs", 5),
         steps_per_epoch=len(train_loader),
         pct_start=0.3, 
@@ -260,16 +264,14 @@ def train(
 
         # Train
         train_loss, train_acc, epoch_time = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, epoch
-,            use_cutmix=config.get("use_cutmix", False),
+            model, train_loader, criterion, optimizer, device, epoch,
+            scheduler=scheduler,
+            use_cutmix=config.get("use_cutmix", False),
             cutmix_alpha=config.get("cutmix_alpha", 1.0),
         )
 
         # Validate
         val_loss, val_acc = validate(model, val_loader, criterion, device)
-
-        # Update learning rate
-        scheduler.step()
 
         # Print epoch summary
         print(f"\n   Epoch Summary:")

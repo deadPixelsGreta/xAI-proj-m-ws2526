@@ -1,0 +1,40 @@
+wandb_version: 1
+
+batch_size:
+  value: 64
+cutmix_alpha:
+  value: 0.6060863562658506
+cutout_size:
+  value: 49
+data_dir:
+  value: C:\Users\ba079778\Downloads\ImageNetSubset\ImageNetSubset
+epochs:
+  value: 30
+label_smoothing:
+  value: 0.051983933147219344
+lr:
+  value: 0.00032626707664144665
+magnitude:
+  value: 14
+mixup_alpha:
+  value: 0.23835815681543557
+model:
+  value: resnet50
+num_ops:
+  value: 3
+num_workers:
+  value: 8
+optimizer:
+  value: adamw
+use_cutmix:
+  value: false
+use_cutout:
+  value: true
+use_mixup:
+  value: true
+wandb:
+  value: true
+wandb_project:
+  value: resnet-aug
+weight_decay:
+  value: 0.00019528437766849128
