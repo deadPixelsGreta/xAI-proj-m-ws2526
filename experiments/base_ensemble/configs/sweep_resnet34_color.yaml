@@ -1,0 +1,46 @@
+# WandB Sweep: ResNet34 + Color Policy + Bayes LR Optimization
+# Initialize: wandb sweep --project xAI-proj-m-ws2526_SP experiments/base_ensemble/configs/sweep_resnet34_color.yaml
+# Run agent: wandb agent <SWEEP_ID>
+
+program: experiments/base_ensemble/scripts/train_single_model.py
+command:
+  - ${env}
+  - python
+  - -m
+  - experiments.base_ensemble.scripts.train_single_model
+  - ${args}
+method: bayes
+metric:
+  name: best_val_accuracy
+  goal: maximize
+
+parameters:
+  config:
+    value: experiments/base_ensemble/configs/default.yaml
+  data-dir:
+    value: C:\Users\ba081274\Downloads\ImageNetSubset
+  epochs:
+    value: 30
+  batch_size:
+    value: 32
+  seed:
+    value: 42
+  scheduler:
+    value: cosine
+  
+  # Fixed: ResNet34 + Color
+  model:
+    value: resnet34
+  aug-policy:
+    value: color
+  
+  # Bayes optimization: Learning rate
+  lr:
+    distribution: log_uniform_values
+    min: 0.00001
+    max: 0.1
+
+early_terminate:
+  type: hyperband
+  min_iter: 3
+  max_iter: 20

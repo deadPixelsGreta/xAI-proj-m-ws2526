@@ -1,5 +1,5 @@
 @echo off
-REM Wrapper script to set PYTHONPATH before running train.py
+REM Wrapper script to set PYTHONPATH before running train_single_model.py
 REM This ensures Python can find the experiments module when WandB runs it
 
 setlocal enabledelayedexpansion
