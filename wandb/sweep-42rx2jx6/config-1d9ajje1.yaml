@@ -1,0 +1,26 @@
+wandb_version: 1
+
+batch_size:
+  value: 32
+cutout_size:
+  value: 36
+data_dir:
+  value: C:\Users\ba079778\Downloads\ImageNetSubset\ImageNetSubset
+epochs:
+  value: 25
+lr:
+  value: 0.002217108865401893
+magnitude:
+  value: 14
+mixup_alpha:
+  value: 0.132301308889606
+model:
+  value: resnet50
+num_ops:
+  value: 3
+use_cutout:
+  value: false
+use_mixup:
+  value: false
+weight_decay:
+  value: 0.0001

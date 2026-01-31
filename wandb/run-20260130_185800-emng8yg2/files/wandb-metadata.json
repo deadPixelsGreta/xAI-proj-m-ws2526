@@ -1,0 +1,55 @@
+{
+  "os":  "Windows-10-10.0.26100-SP0",
+  "python":  "CPython 3.11.14",
+  "startedAt":  "2026-01-30T17:58:00.459690Z",
+  "args":  [
+    "--batch_size=32",
+    "--cutout_size=21",
+    "--data_dir=C:\\Users\\ba079778\\Downloads\\ImageNetSubset\\ImageNetSubset",
+    "--epochs=25",
+    "--lr=0.00023661",
+    "--magnitude=9",
+    "--mixup_alpha=0.33892732018392685",
+    "--model=resnet50",
+    "--num_ops=4",
+    "--num_workers=8",
+    "--use_cutout=False",
+    "--use_mixup=True",
+    "--wandb=True",
+    "--wandb_project=resnet-aug",
+    "--weight_decay=0.0001"
+  ],
+  "program":  "-m experiments.bagging.scripts.train",
+  "git":  {
+    "remote":  "https://github.com/deadPixelsGreta/xAI-proj-m-ws2526.git",
+    "commit":  "a7818c497a3868422fe593b32673d24f6bdc6425"
+  },
+  "email":  "sebastian.drefahl@stud.uni-bamberg.de",
+  "root":  "C:\\Users\\ba079778\\Documents\\xAI-proj-m-ws2526",
+  "host":  "GU130103-05",
+  "executable":  "C:\\Users\\ba079778\\.conda\\envs\\yai\\python.exe",
+  "cpu_count":  10,
+  "cpu_count_logical":  16,
+  "gpu":  "NVIDIA RTX A4000",
+  "gpu_count":  1,
+  "disk":  {
+    "/":  {
+      "total":  "536863989760",
+      "used":  "239544643584"
+    }
+  },
+  "memory":  {
+    "total":  "68393086976"
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA RTX A4000",
+      "memoryTotal":  "17171480576",
+      "cudaCores":  6144,
+      "architecture":  "Ampere",
+      "uuid":  "GPU-4b888224-1652-81da-d561-ffd318011b14"
+    }
+  ],
+  "cudaVersion":  "12.8",
+  "writerId":  "5kq71y3xv4fm8wfbrwuxgn2eucetq0go"
+}

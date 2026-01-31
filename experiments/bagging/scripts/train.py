@@ -59,6 +59,32 @@ def parse_args():
         help="Path to YAML config file (values can be overridden by CLI flags)",
     )
 
+    # Early stopping and checkpoint arguments
+    parser.add_argument(
+        "--early-stopping-thresh",
+        "--early_stopping_thresh",
+        type=int,
+        default=8,
+        help="Number of epochs without improvement before early stopping",
+        dest="early_stopping_thresh",
+    )
+    parser.add_argument(
+        "--top-n-checkpoints",
+        "--top_n_checkpoints",
+        type=int,
+        default=2,
+        help="Number of best checkpoints to keep",
+        dest="top_n_checkpoints",
+    )
+
+    parser.add_argument(
+        "--freeze-backbone",
+        "--freeze_backbone",
+        type=bool, 
+        default=False, 
+        help="Whether to freeze the backbone during training"
+    )
+
     # Model arguments
     parser.add_argument(
         "--model",
@@ -69,6 +95,7 @@ def parse_args():
     )
     parser.add_argument(
         "--no-pretrained",
+        "--no_pretrained",
         action="store_true",
         help="Train from scratch without pretrained weights",
     )
@@ -76,6 +103,7 @@ def parse_args():
     # Data arguments
     parser.add_argument(
         "--data-dir",
+        "--data_dir",
         type=str,
         default="ImageNetSubset",
         help="Path to dataset directory",
@@ -89,7 +117,9 @@ def parse_args():
         dest="batch_size",
     )
     parser.add_argument(
-        "--num-workers", type=int, default=4, help="Number of data loader workers"
+        "--num-workers", 
+        "--num_workers",
+        type=int, default=4, help="Number of data loader workers"
     )
 
     # Training arguments
@@ -98,14 +128,99 @@ def parse_args():
     )
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
     parser.add_argument("--momentum", type=float, default=0.9, help="SGD momentum")
-    parser.add_argument("--weight-decay", type=float, default=1e-4, help="Weight decay")
+    parser.add_argument(
+        "--weight-decay", 
+        "--weight_decay", 
+        type=float, 
+        default=1e-4, 
+        help="Weight decay (L2 regularization)"
+    )
     parser.add_argument(
         "--seed", type=int, default=None, help="Random seed for reproducibility"
+    )
+
+    # Optimizer arguments
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="sgd",
+        choices=["sgd", "adamw"],
+        help="Optimizer type (sgd or adamw)",
+    )
+    parser.add_argument(
+        "--label-smoothing",
+        "--label_smoothing",
+        type=float,
+        default=0.1,
+        help="Label smoothing factor",
+        dest="label_smoothing",
+    )
+
+    parser.add_argument(
+        "--num-ops",
+        "--num_ops",
+        type=int,
+        default=2,
+        help="Number of augmentation operations for RandAugment",
+    )
+    parser.add_argument(
+        "--magnitude",
+        type=int,
+        default=9,
+        help="Magnitude of augmentation operations for RandAugment",
+    )
+    parser.add_argument(
+        "--use-cutout",
+        "--use_cutout",
+        type=lambda x: str(x).lower() in ['true', '1', 'yes'],
+        default=False,
+        help="Enable cutout/random erasing augmentation",
+        dest="use_cutout",
+    )
+    parser.add_argument(
+        "--cutout-size",
+        "--cutout_size",
+        type=int,
+        default=32,
+        help="Size of cutout region (for random erasing)",
+    )
+    parser.add_argument(
+        "--use-mixup",
+        "--use_mixup",
+        type=lambda x: str(x).lower() in ['true', '1', 'yes'],
+        default=False,
+        help="Enable mixup augmentation",
+        dest="use_mixup",
+    )
+    parser.add_argument(
+        "--mixup-alpha",
+        "--mixup_alpha",
+        type=float,
+        default=0.2,
+        help="Alpha parameter for mixup augmentation",
+        dest="mixup_alpha",
+    )
+    parser.add_argument(
+        "--use-cutmix",
+        "--use_cutmix",
+        type=lambda x: str(x).lower() in ['true', '1', 'yes'],
+        default=False,
+        help="Enable CutMix augmentation",
+        dest="use_cutmix",
+    )
+    parser.add_argument(
+        "--cutmix-alpha",
+        "--cutmix_alpha",
+        type=float,
+        default=1.0,
+        help="Alpha parameter for CutMix augmentation",
+        dest="cutmix_alpha",
     )
 
     # Output arguments
     parser.add_argument(
         "--save-dir",
+        "--save_dir",
         type=str,
         default=str(Path(__file__).resolve().parent.parent / "checkpoints"),
         help="Directory to save checkpoints",
@@ -113,10 +228,15 @@ def parse_args():
 
     # Wandb arguments
     parser.add_argument(
-        "--wandb", action="store_true", help="Enable Weights & Biases logging"
+        "--wandb", 
+        type=lambda x: str(x).lower() in ['true', '1', 'yes'],
+        default=True,
+        help="Enable Weights & Biases logging"
     )
     parser.add_argument(
-        "--wandb-project", type=str, default="imagenet-subset", help="W&B project name"
+        "--wandb-project",
+        "--wandb_project",
+        type=str, default="imagenet-subset", help="W&B project name"
     )
     parser.add_argument("--wandb-run-name", type=str, default=None, help="W&B run name")
 
@@ -164,7 +284,26 @@ def main():
         # freeze_backbone in yaml
         if "freeze_backbone" in tr and not cli_overrides("--freeze-backbone"):
             args.freeze_backbone = bool(tr["freeze_backbone"])
+        if "optimizer" in tr and not cli_overrides("--optimizer"):
+            args.optimizer = str(tr["optimizer"])
+        if "label_smoothing" in tr and not cli_overrides("--label-smoothing"):
+            args.label_smoothing = float(tr["label_smoothing"])
 
+        # augmentation parameters in yaml
+        aug = cfg.get("augmentation", {})
+        if "num_ops" in aug and not cli_overrides("--num-ops"):
+            args.num_ops = int(aug["num_ops"])
+        if "magnitude" in aug and not cli_overrides("--magnitude"):
+            args.magnitude = int(aug["magnitude"])
+        if "use_cutout" in aug and not cli_overrides("--use-cutout"):
+            args.use_cutout = bool(aug["use_cutout"])
+        if "cutout_size" in aug and not cli_overrides("--cutout-size"):
+            args.cutout_size = int(aug["cutout_size"])
+        if "use_mixup" in aug and not cli_overrides("--use-mixup"):
+            args.use_mixup = bool(aug["use_mixup"])
+        if "mixup_alpha" in aug and not cli_overrides("--mixup-alpha"):
+            args.mixup_alpha = float(aug["mixup_alpha"])
+        
         # model section
         md = cfg.get("model", {})
         if "architecture" in md and not cli_overrides("--model"):
@@ -235,8 +374,17 @@ def main():
     print(f"   Number of classes: {dataset_info['num_classes']}")
 
     # Create data loaders
+    aug_params = {
+        'num_ops': args.num_ops,
+        'magnitude': args.magnitude,
+        'use_cutout': args.use_cutout,
+        'cutout_size': args.cutout_size,
+        'use_mixup': args.use_mixup,
+        'mixup_alpha': args.mixup_alpha,
+    }
+    
     train_loader, val_loader, num_classes = create_data_loaders(
-        args.data_dir, args.batch_size, args.num_workers, args.model
+        args.data_dir, args.batch_size, args.num_workers, True, args.model, aug_params
     )
 
     # Create model
@@ -258,6 +406,10 @@ def main():
         "early_stopping_thresh": args.early_stopping_thresh,
         "top_n_checkpoints": args.top_n_checkpoints,
         "freeze_backbone": args.freeze_backbone,
+        "optimizer": args.optimizer,
+        "label_smoothing": args.label_smoothing,
+        "use_cutmix": args.use_cutmix,
+        "cutmix_alpha": args.cutmix_alpha,
     }
 
     print(f"\n Training Configuration:")
@@ -284,6 +436,15 @@ def main():
         "dir": getattr(args, "wandb_dir", None),
         "group": getattr(args, "wandb_group", None),
         "job_type": getattr(args, "wandb_job_type", None),
+        # Add augmentation parameters to config for WandB logging
+        "augmentation": {
+            "num_ops": args.num_ops,
+            "magnitude": args.magnitude,
+            "use_cutout": args.use_cutout,
+            "cutout_size": args.cutout_size,
+            "use_mixup": args.use_mixup,
+            "mixup_alpha": args.mixup_alpha,
+        },
     }
 
     # Train
