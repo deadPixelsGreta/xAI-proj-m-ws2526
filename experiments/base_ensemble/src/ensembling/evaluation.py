@@ -35,7 +35,7 @@ def evaluate_ensemble_dataset(
     model_names: List[str],
     data_dir: str,
     device: torch.device,
-    split: str = "val",
+    split: Optional[str] = "val",
     class_names: Optional[List[str]] = None,
     progress_bar: bool = True,
     weights: Optional[List[float]] = None,
@@ -43,8 +43,11 @@ def evaluate_ensemble_dataset(
     """Evaluate ensemble on a dataset split and return comprehensive metrics."""
     if class_names is None:
         class_names = CLASS_NAMES
-
-    eval_dir = Path(data_dir) / split
+    # Handle split=None for direct class folders
+    if split is None or split == "":
+        eval_dir = Path(data_dir)
+    else:
+        eval_dir = Path(data_dir) / split
     transform = get_val_transform()
 
     # Trackers
