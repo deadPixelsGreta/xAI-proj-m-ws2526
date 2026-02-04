@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 
+from experiments.bagging.src.data.cutmix import cutmix_data
 from experiments.bagging.src.utils.checkpointing import CheckpointSaver
 from torch.amp import autocast, GradScaler
 

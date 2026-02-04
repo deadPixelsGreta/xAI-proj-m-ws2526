@@ -60,19 +60,25 @@ def get_resnet34_augmentation(aug_params: dict) -> list:
         'SVHN': transforms.AutoAugmentPolicy.SVHN,
     }
     
-    base = [
+    # Basis-Transformationen
+    augs = [
         transforms.RandomResizedCrop(224, scale=(0.08, 1.0)),
         transforms.RandomHorizontalFlip(p=0.5),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
     ]
     
+    # Augmentation hinzufügen (BEVOR ToTensor und Normalize!)
     if use_trivial:
-        base.append(transforms.TrivialAugmentWide())
+        augs.append(transforms.TrivialAugmentWide())
     else:
-        base.append(transforms.AutoAugment(policy=policy_map.get(policy, transforms.AutoAugmentPolicy.IMAGENET)))
+        augs.append(transforms.AutoAugment(policy=policy_map.get(policy, transforms.AutoAugmentPolicy.IMAGENET)))
     
-    return base
+    # Abschluss: ToTensor und Normalize
+    augs.extend([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+    ])
+    
+    return augs
 
 
 def get_resnet50_augmentation(aug_params: dict) -> list:
