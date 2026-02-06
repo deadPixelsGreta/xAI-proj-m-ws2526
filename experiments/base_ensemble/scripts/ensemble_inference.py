@@ -110,7 +110,7 @@ def parse_args():
         "--split",
         type=str,
         default="val",
-        choices=["val", "test"],
+        choices=["val", "test", ""],
         help="Dataset split to evaluate on (val or test)",
     )
 
@@ -239,7 +239,7 @@ def evaluate_ensemble(
         model_names=model_names,
         data_dir=data_dir,
         device=device,
-        split=split,
+        split=None if split == "" else split,
         progress_bar=True,
         weights=weights,
     )
@@ -249,7 +249,7 @@ def evaluate_ensemble(
         model_names=model_names,
         wandb_enabled=wandb_enabled,
         wandb_project=wandb_project,
-        split=split,
+        split=split if split else "direct",
         data_dir=str(data_dir),
     )
 
