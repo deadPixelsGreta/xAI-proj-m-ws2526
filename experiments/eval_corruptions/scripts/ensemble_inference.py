@@ -14,20 +14,20 @@ try:
 except ImportError:
     WANDB_AVAILABLE = False
 
-from experiments.base_ensemble.src.utils import get_device
-from experiments.base_ensemble.src.utils.device import get_device_name
-from experiments.base_ensemble.src.utils.arguments_parsing import (
+from experiments.eval_corruptions.src.utils import get_device
+from experiments.eval_corruptions.src.utils.device import get_device_name
+from experiments.eval_corruptions.src.utils.arguments_parsing import (
     add_common_args,
     add_wandb_args,
 )
-from experiments.base_ensemble.src.models import load_checkpoint
-from experiments.base_ensemble.src.data import CLASS_NAMES
-from experiments.base_ensemble.src.ensembling import (
+from experiments.eval_corruptions.src.models import load_checkpoint
+from experiments.eval_corruptions.src.data import CLASS_NAMES
+from experiments.eval_corruptions.src.ensembling import (
     run_inference,
     evaluate_ensemble_dataset,
     EvaluationResult,
 )
-from experiments.base_ensemble.src.ensembling.inference import (
+from experiments.eval_corruptions.src.ensembling.inference import (
     find_default_checkpoints,
 )
 

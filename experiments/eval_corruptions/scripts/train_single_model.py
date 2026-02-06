@@ -21,7 +21,7 @@ def setup_path():
                 sys.path.insert(0, str(project_root))
             return project_root
 
-    # Fallback: use parent's parent's parent (scripts -> base_ensemble -> experiments -> project root)
+    # Fallback: use parent's parent's parent (scripts -> eval_corruptions -> experiments -> project root)
     project_root = (current.parent.parent.parent).resolve()
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
@@ -38,16 +38,16 @@ try:
 except ImportError:  # pragma: no cover
     yaml = None
 
-from experiments.base_ensemble.src.utils.device import get_device, set_seed  # noqa: E402
-from experiments.base_ensemble.src.utils.device import get_device_name  # noqa: E402
-from experiments.base_ensemble.src.utils.arguments_parsing import (
+from experiments.eval_corruptions.src.utils.device import get_device, set_seed  # noqa: E402
+from experiments.eval_corruptions.src.utils.device import get_device_name  # noqa: E402
+from experiments.eval_corruptions.src.utils.arguments_parsing import (
     add_common_args,
     add_wandb_args,
     add_model_args,
 )
-from experiments.base_ensemble.src.models import SUPPORTED_MODELS, create_model  # noqa: E402
-from experiments.base_ensemble.src.data import create_data_loaders, get_dataset_info  # noqa: E402
-from experiments.base_ensemble.src.training import train, TrainingConfig  # noqa: E402
+from experiments.eval_corruptions.src.models import SUPPORTED_MODELS, create_model  # noqa: E402
+from experiments.eval_corruptions.src.data import create_data_loaders, get_dataset_info  # noqa: E402
+from experiments.eval_corruptions.src.training import train, TrainingConfig  # noqa: E402
 
 
 def parse_args():
