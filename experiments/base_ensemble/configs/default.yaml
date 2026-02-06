@@ -1,0 +1,44 @@
+# Default configuration for ImageNetSubset training
+
+training:
+  epochs: 30
+  batch_size: 128
+  learning_rate: 0.001
+  momentum: 0.9
+  weight_decay: 0.0001
+  num_workers: 8
+  seed: null                    # Random seed for reproducibility (null = random)
+  scheduler: step               # LR scheduler: 'step' or 'cosine'
+  scheduler_step_size: 7        # For step scheduler: decay LR every N epochs
+  scheduler_gamma: 0.1          # For step scheduler: decay factor
+  early_stopping_patience: 5    # Stop after N epochs without improvement (0 = disabled)
+  label_smoothing: 0.1          # Label smoothing factor
+  amp: true                     # Enable Mixed Precision (speedup for A4000)
+  grad_clip: 1.0                # Gradient clipping norm (0.0 to disable)
+  accum_steps: 1                # Gradient accumulation steps
+
+model:
+  architecture: resnet34 
+  pretrained: true
+
+data:
+  data_dir: datasets
+  split_ratios:
+    train: 0.8
+    val: 0.1
+    test: 0.1
+
+paths:
+  checkpoint_dir: experiments/checkpoints
+
+wandb:
+  enabled: true
+  project: xAI-proj-m-ws2526_SP
+  run_name: null        # optional
+  entity: null          # optional
+  tags: []              # optional list of strings
+  notes: null           # optional
+  mode: online          # online | offline | disabled
+  dir: ./wandb          # optional output dir
+  group: null           # optional grouping label
+  job_type: null        # optional job type
