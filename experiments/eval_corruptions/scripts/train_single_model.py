@@ -64,7 +64,6 @@ def parse_args():
         help="Path to YAML config file (values can be overridden by CLI flags)",
     )
 
-<<<<<<<< HEAD:experiments/resnets_aug/scripts/train.py
     # Early stopping and checkpoint arguments
     parser.add_argument(
         "--early-stopping-thresh",
