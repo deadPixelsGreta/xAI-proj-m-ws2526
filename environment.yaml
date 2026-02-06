@@ -5,11 +5,11 @@ channels:
   - pytorch
   - nvidia
 dependencies:
-  - python==3.11
-  - pytorch==2.5.1
-  - torchvision==0.20.1
-  - torchaudio==2.5.1
-  - pytorch-cuda==12.1
+  - python=3.11
+  - pytorch=2.5.1
+  - torchvision=0.20.1
+  - torchaudio=2.5.1
+  - pytorch-cuda=12.1
   - pip
   - pip:
       - wandb==0.24.1
