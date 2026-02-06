@@ -128,13 +128,21 @@ def create_data_loaders(
     # Use augmentation policy if specified
     if aug_policy is not None:
         try:
-            from experiments.aug_diversity.src.augmentations import POLICY_MAP, get_val_transform as policy_val_transform
+            from experiments.base_ensemble.src.data.augmentations import (
+                POLICY_MAP,
+                get_val_transform as policy_val_transform,
+            )
+
             if aug_policy not in POLICY_MAP:
-                raise ValueError(f"Unknown augmentation policy: {aug_policy}. Choose from {list(POLICY_MAP.keys())}")
+                raise ValueError(
+                    f"Unknown augmentation policy: {aug_policy}. Choose from {list(POLICY_MAP.keys())}"
+                )
             train_transform = POLICY_MAP[aug_policy]()
             val_transform = policy_val_transform()
         except ImportError:
-            print(f"Warning: Could not import augmentation policies. Falling back to default.")
+            print(
+                f"Warning: Could not import augmentation policies. Falling back to default."
+            )
             train_transform = get_train_transform(sota=sota_aug)
             val_transform = get_val_transform()
     elif proxy_ood:
