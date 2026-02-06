@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""CLI to run ensemble inference/evaluation on ImageNetSubset-style data."""
-
 import argparse
 import sys
 import torch
@@ -370,7 +368,7 @@ def main():
         ]
 
         if not image_files:
-            print(f"\n❌ No images found in {args.image_dir}")
+            print(f"\nNo images found in {args.image_dir}")
             sys.exit(1)
 
         print(f"\n Processing {len(image_files)} images from {args.image_dir}")
