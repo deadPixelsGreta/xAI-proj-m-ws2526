@@ -1,5 +1,0 @@
-# PyTorch dependencies for ResNet training
-torch>=2.0.0
-torchvision>=0.15.0
-wandb>=0.15.0
-pyyaml>=6.0
