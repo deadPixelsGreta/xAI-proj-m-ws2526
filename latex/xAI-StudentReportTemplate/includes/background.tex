@@ -46,12 +46,12 @@ Such discrepancies are described within the framework of the dataset shift probl
 How reliable are predictions when evaluated on modified test data that do not originate from the training environment on which the model was trained?
 
 Classical supervised learning methods are generally not designed to handle such distribution shifts. 
-Predictive performance is optimized under the implicit assumption of stable training and testing conditions and can therefore exhibit substantial degradation even under moderate deviations in data distribution \citep[p.~28]{quinonero-candelaDatasetShiftMachine2008}, \cite{zhouDomainGeneralizationSurvey2023}. 
+Predictive performance is optimized under the implicit assumption of stable training and testing conditions and can therefore exhibit substantial degradation even under moderate deviations in data distribution \citep[p.~28]{quinonero-candelaDatasetShiftMachine2008}, \citep{zhouDomainGeneralizationSurvey2023}. 
 This observation highlights that high accuracy under training conditions alone is not a reliable indicator of robustness in real-world deployment scenarios and motivates approaches that explicitly target generalization under distribution shift.
 
 \subsection{Domain Generalization \textit{(DG)} and Robustness \textit{(RB)}}
 Many trained models achieve high performance on their respective training datasets but generalize insufficiently to data collected in different acquisition environments. 
-\citep{torralbaUnbiasedLookDataset2011} demonstrate in an empirical analysis that commonly used image datasets contain strong dataset-specific biases, leading to significant performance drops in cross-dataset evaluations. 
+\citet{torralbaUnbiasedLookDataset2011} demonstrate in an empirical analysis that commonly used image datasets contain strong dataset-specific biases, leading to significant performance drops in cross-dataset evaluations. 
 Models therefore learn not only task-relevant features but also domain-specific regularities that are not stable outside the training domain.
 
 Domain Generalization addresses this issue by explicitly considering learning under distributional differences across domains. 
@@ -60,9 +60,9 @@ The objective is to learn representations that remain stable across multiple sou
 
 Domain Generalization assumes that input distributions may differ across domains, while the underlying relationship between inputs and target labels remains stable. 
 In other words, the marginal distribution of the inputs can change across domains, but the conditional relationship between input and label is assumed to be invariant. 
-This means that although data may vary in appearance or acquisition conditions, the fundamental decision rule that maps inputs to outputs is shared across domains \cite{pmlr-v28-muandet13}.
+This means that although data may vary in appearance or acquisition conditions, the fundamental decision rule that maps inputs to outputs is shared across domains \citep{pmlr-v28-muandet13}.
 
-\citep{pmlr-v28-muandet13} formulate domain generalization as the problem of extracting features from multiple related domains that are invariant to domain-specific variations while preserving the underlying functional relationship between input and target variable. 
+\citet{pmlr-v28-muandet13} formulate domain generalization as the problem of extracting features from multiple related domains that are invariant to domain-specific variations while preserving the underlying functional relationship between input and target variable. 
 DG therefore represents a central approach for achieving robustness to systematic distribution shifts without requiring post-hoc adaptation to new domains.
 
 \subsection{Ensemble Learning \textit{(EL)}}
