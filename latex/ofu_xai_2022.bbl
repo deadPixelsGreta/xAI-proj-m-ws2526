@@ -1,0 +1,126 @@
+\begin{thebibliography}{14}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Dietterich(2000)]{dietterichEnsembleMethodsMachine2000}
+T.~G. Dietterich.
+\newblock Ensemble {{Methods}} in {{Machine Learning}}.
+\newblock In G.~Goos, J.~Hartmanis, and J.~Van~Leeuwen, editors, \emph{Multiple
+  {{Classifier Systems}}}, volume 1857, pages 1--15. Springer Berlin
+  Heidelberg, Berlin, Heidelberg, 2000.
+\newblock ISBN 978-3-540-67704-8 978-3-540-45014-6.
+\newblock \doi{10.1007/3-540-45014-9_1}.
+
+\bibitem[Dosovitskiy et~al.(2020)Dosovitskiy, Beyer, Kolesnikov, Weissenborn,
+  Zhai, Unterthiner, Dehghani, Minderer, Heigold, Gelly, Uszkoreit, and
+  Houlsby]{dosovitskiyImageWorth16x162020}
+A.~Dosovitskiy, L.~Beyer, A.~Kolesnikov, D.~Weissenborn, X.~Zhai,
+  T.~Unterthiner, M.~Dehghani, M.~Minderer, G.~Heigold, S.~Gelly, J.~Uszkoreit,
+  and N.~Houlsby.
+\newblock An {{Image}} is {{Worth}} 16x16 {{Words}}: {{Transformers}} for
+  {{Image Recognition}} at {{Scale}}, 2020.
+
+\bibitem[Fedus et~al.(2021)Fedus, Zoph, and
+  Shazeer]{fedusSwitchTransformersScaling2021}
+W.~Fedus, B.~Zoph, and N.~Shazeer.
+\newblock Switch {{Transformers}}: {{Scaling}} to {{Trillion Parameter Models}}
+  with {{Simple}} and {{Efficient Sparsity}}, 2021.
+
+\bibitem[Guo et~al.(2017)Guo, Pleiss, Sun, and Weinberger]{pmlr-v70-guo17a}
+C.~Guo, G.~Pleiss, Y.~Sun, and K.~Q. Weinberger.
+\newblock On calibration of modern neural networks.
+\newblock In D.~Precup and Y.~W. Teh, editors, \emph{Proceedings of the 34th
+  International Conference on Machine Learning}, volume~70 of \emph{Proceedings
+  of Machine Learning Research}, pages 1321--1330. PMLR, 06--11 Aug 2017.
+\newblock URL \url{https://proceedings.mlr.press/v70/guo17a.html}.
+
+\bibitem[He et~al.(2016)He, Zhang, Ren, and Sun]{He_2016_CVPR}
+K.~He, X.~Zhang, S.~Ren, and J.~Sun.
+\newblock Deep residual learning for image recognition.
+\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and
+  Pattern Recognition (CVPR)}, June 2016.
+
+\bibitem[Huang et~al.(2017)Huang, Liu, van~der Maaten, and
+  Weinberger]{Huang_2017_CVPR}
+G.~Huang, Z.~Liu, L.~van~der Maaten, and K.~Q. Weinberger.
+\newblock Densely connected convolutional networks.
+\newblock In \emph{Proceedings of the IEEE Conference on Computer Vision and
+  Pattern Recognition (CVPR)}, July 2017.
+
+\bibitem[Masoudnia and
+  Ebrahimpour(2014)]{masoudniaMixtureExpertsLiterature2014}
+S.~Masoudnia and R.~Ebrahimpour.
+\newblock Mixture of experts: A literature survey.
+\newblock \emph{Artificial Intelligence Review}, 42\penalty0 (2):\penalty0
+  275--293, Aug. 2014.
+\newblock ISSN 0269-2821, 1573-7462.
+\newblock \doi{10.1007/s10462-012-9338-y}.
+
+\bibitem[Muandet et~al.(2013)Muandet, Balduzzi, and
+  Schölkopf]{pmlr-v28-muandet13}
+K.~Muandet, D.~Balduzzi, and B.~Schölkopf.
+\newblock Domain generalization via invariant feature representation.
+\newblock In S.~Dasgupta and D.~McAllester, editors, \emph{Proceedings of the
+  30th International Conference on Machine Learning}, volume~28 of
+  \emph{Proceedings of Machine Learning Research}, pages 10--18, Atlanta,
+  Georgia, USA, 17--19 Jun 2013. PMLR.
+\newblock URL \url{https://proceedings.mlr.press/v28/muandet13.html}.
+
+\bibitem[Petrakova et~al.(2015)Petrakova, Affenzeller, and
+  Merkurjeva]{petrakovaHeterogeneousHomogeneousMachine2015}
+A.~Petrakova, M.~Affenzeller, and G.~Merkurjeva.
+\newblock Heterogeneous versus {{Homogeneous Machine Learning Ensembles}}.
+\newblock \emph{Information Technology and Management Science}, 18\penalty0
+  (1), Jan. 2015.
+\newblock ISSN 2255-9094.
+\newblock \doi{10.1515/itms-2015-0021}.
+
+\bibitem[{Qui{\~n}onero-Candela} et~al.(2008){Qui{\~n}onero-Candela}, Sugiyama,
+  Schwaighofer, and Lawrence]{quinonero-candelaDatasetShiftMachine2008}
+J.~{Qui{\~n}onero-Candela}, M.~Sugiyama, A.~Schwaighofer, and N.~D. Lawrence,
+  editors.
+\newblock \emph{Dataset {{Shift}} in {{Machine Learning}}}.
+\newblock The MIT Press, Dec. 2008.
+\newblock ISBN 978-0-262-25510-3.
+\newblock \doi{10.7551/mitpress/9780262170055.001.0001}.
+
+\bibitem[Tan and Le(2019)]{pmlr-v97-tan19a}
+M.~Tan and Q.~Le.
+\newblock {E}fficient{N}et: Rethinking model scaling for convolutional neural
+  networks.
+\newblock In K.~Chaudhuri and R.~Salakhutdinov, editors, \emph{Proceedings of
+  the 36th International Conference on Machine Learning}, volume~97 of
+  \emph{Proceedings of Machine Learning Research}, pages 6105--6114. PMLR,
+  09--15 Jun 2019.
+\newblock URL \url{https://proceedings.mlr.press/v97/tan19a.html}.
+
+\bibitem[Torralba and Efros(2011)]{torralbaUnbiasedLookDataset2011}
+A.~Torralba and A.~A. Efros.
+\newblock Unbiased look at dataset bias.
+\newblock In \emph{{{CVPR}} 2011}, pages 1521--1528, Colorado Springs, CO, USA,
+  June 2011. IEEE.
+\newblock ISBN 978-1-4577-0394-2.
+\newblock \doi{10.1109/CVPR.2011.5995347}.
+
+\bibitem[Wu et~al.(2023)Wu, Chow, Wei, and Liu]{wuExploringModelLearning2023}
+Y.~Wu, K.-H. Chow, W.~Wei, and L.~Liu.
+\newblock Exploring {{Model Learning Heterogeneity}} for {{Boosting Ensemble
+  Robustness}}.
+\newblock In \emph{2023 {{IEEE International Conference}} on {{Data Mining}}
+  ({{ICDM}})}, pages 648--657, Shanghai, China, Dec. 2023. IEEE.
+\newblock ISBN 979-8-3503-0788-7.
+\newblock \doi{10.1109/ICDM58522.2023.00074}.
+
+\bibitem[Zhou et~al.(2023)Zhou, Liu, Qiao, Xiang, and
+  Loy]{zhouDomainGeneralizationSurvey2023}
+K.~Zhou, Z.~Liu, Y.~Qiao, T.~Xiang, and C.~C. Loy.
+\newblock Domain {{Generalization}}: {{A Survey}}.
+\newblock \emph{IEEE Transactions on Pattern Analysis and Machine
+  Intelligence}, 45\penalty0 (4):\penalty0 4396--4415, Apr. 2023.
+\newblock ISSN 1939-3539.
+\newblock \doi{10.1109/TPAMI.2022.3195549}.
+
+\end{thebibliography}

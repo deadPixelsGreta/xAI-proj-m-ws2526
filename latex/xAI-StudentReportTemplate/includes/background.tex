@@ -1,0 +1,44 @@
+\section{Background}
+\label{background}
+
+\subsection{Distribution Shift}
+In realen Anwendungsszenarien unterscheiden sich Trainings- und Testsituationen häufig in relevanten Eigenschaften. 
+Diese Abweichungen werden im Rahmen des Dataset-Shift-Problems beschrieben, das sich mit der Übertragung von Information zwischen eng verwandten, aber nicht identischen Umgebungen befasst \citep[pp.~4--5]{quinonero-candelaDatasetShiftMachine2008}. 
+Wie verläßlich sind dabei Vorhersagen mit veränderten Testdaten, die nicht aus der Trainingsumgebung stammen, mit denen das Model trainiert wurde?
+
+Klassische überwachte Lernverfahren sind in der Regel nicht darauf ausgelegt, mit solchen Distribution Shifts umzugehen. 
+Die Vorhersageleistung werden unter der impliziten Annahme stabiler Trainings- und Testbedingungen optimiert und können daher bereits bei moderaten Abweichungen der Datenverteilung deutliche Leistungseinbußen zeigen \citep[p.~28]{quinonero-candelaDatasetShiftMachine2008}, \cite{zhouDomainGeneralizationSurvey2023}.
+Diese Beobachtung verdeutlicht, dass hohe Genauigkeit unter Trainingsbedingungen allein kein verlässlicher Indikator für Robustheit in realen Anwendungsszenarien ist und motiviert Ansätze, die explizit auf Generalisierung unter Distribution Shift abzielen.
+
+\subsection{Domain Generalisierung \textit{(DG)} and Robustness \textit{(RB)}}
+Viele trainierte Modelle zeigen eine hohe Leistung auf dem jeweiligen Trainingsdatensatz, generalisieren jedoch nur unzureichend auf Daten aus anderen Erhebungsumgebungen. 
+\citep{torralbaUnbiasedLookDataset2011} zeigen in einer empirischen Analyse, dass gängige Bilddatensätze starke, datensatzspezifische Biases enthalten, die zu erheblichen Leistungseinbrüchen bei Cross-Dataset-Evaluationen führen. 
+Modelle lernen dabei nicht nur aufgabenrelevante Merkmale, sondern auch domänenspezifische Regularitäten, die außerhalb der Trainingsdomäne nicht stabil sind.
+
+Domain Generalization adressiert dieses Problem, indem das Lernen unter expliziter Berücksichtigung von Verteilungsverschiebungen zwischen Domänen betrachtet wird. 
+Im Gegensatz zur Domain Adaptation wird dabei angenommen, dass während des Trainings kein Zugriff auf Daten aus der Ziel-Domäne besteht \citep{pmlr-v28-muandet13}. 
+Ziel ist es, Repräsentationen zu lernen, die über mehrere Trainingsdomänen hinweg stabil sind und auf zuvor unbekannte Domänen übertragen werden können.
+
+Formal liegt der Domain-Generalization-Annahme zugrunde, dass sich die Eingabeverteilungen zwischen Domänen unterscheiden, also $P_k(X) \neq P_l(X)$, 
+während die bedingte Verteilung der Zielvariable gegeben die Eingabe über Domänen hinweg stabil bleibt, d.\,h.\ $P_k(Y \mid X) = P_l(Y \mid X)$, 
+für unterschiedliche Domänen $\mathcal{D}_k$ und $\mathcal{D}_l$ \cite{pmlr-v28-muandet13}.
+
+\citep{pmlr-v28-muandet13} formulieren Domain Generalization als das Problem, aus mehreren verwandten Domänen solche Merkmale zu extrahieren, die invariant gegenüber domänenspezifischen Veränderungen sind, während die zugrunde liegende funktionale Beziehung zwischen Eingabe und Zielvariable erhalten bleibt. 
+Damit stellt DG einen zentralen Ansatz dar, um Robustheit gegenüber systematischen Verteilungsverschiebungen zu erreichen, ohne auf nachträgliche Anpassung an neue Domänen angewiesen zu sein.
+
+\subsection{Ensemble Learning \textit{EL}}
+Da DG und RB darauf abzielen, Leistungsabfälle unter unbekannten Verteilungsverschiebungen zu vermeiden, stellt sich die Frage nach geeigneten Ideen, zur Erhöhung der Robustheit. 
+Im survey von \citet{zhouDomainGeneralizationSurvey2023} wird EL als modellbasierter Ansatz zur DG eingeordnet, bei dem Robustheit durch die Kombination mehrerer Modelle oder Modellzustände erzeugt wird. Die Idee dabei ist, dass unterschiedliche Modelle unterschiedlich auf Distribution Shifts reagieren und somit nicht auf denselben Eingaben versagen. 
+Durch die Aggregation mehrerer Hypothesen können solche komplementären Fehlermuster ausgenutzt und die Abhängigkeit von einem einzelnen Modell reduziert werden.
+
+Die Motivation besteht darin, dass unterschiedliche Modelle unterschiedliche Fehlermuster aufweisen und somit nicht auf denselben Eingaben scheitern. 
+Durch die Aggregation mehrerer Modelle können solche komplementären Fehler ausgenutzt und die Varianz einzelner Vorhersagen reduziert werden.
+
+Im Kontext von DG und RB gewinnt EL besondere Bedeutung. 
+Unter Verteilungsverschiebungen reagieren Modelle oft unterschiedlich auf neue oder veränderte Daten, sodass kein einzelnes Modell über alle Domänen hinweg optimal ist. 
+Ensembles bieten hier eine Möglichkeit, Robustheit auf Modellebene zu erhöhen, indem mehrere Hypothesen berücksichtigt und ihre Vorhersagen kombiniert werden.
+
+% EL gehört dabei zu den modellbasierten Ansätzen und verfolgt die Idee, mehrere Modelle zu kombinieren, die unterschiedlich auf Verteilungsverschiebungen reagieren. 
+% Durch die Aggregation solcher Modelle können komplementäre Fehlermuster ausgenutzt werden, was Ensembles zu einem naheliegenden Ansatz macht, um RB gegenüber Distribution Shift zu erhöhen.
+
+Mit diesem Wissen und den vorhandenen Ressourcen wurde die Ensemble Methode als geeigneter Projektansatz gewählt. Dabei bot sich im Zusammenhang mit den zuvor trainierten 18-layer und 50-layer ResNets an, ein homogenes Ensemble zu untersuchen und dem gegenüber ein heterogeneren Ensembleansatz zu stellen, entlang der Diversität in den Modellen.

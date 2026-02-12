@@ -1,0 +1,7 @@
+As shown in Table~\ref{tab:homo_clean}, on the clean validation set, the \textbf{homogeneous ensemble} achieves an overall accuracy of 89.20\%, compared to 88.20\% (18-layer ResNet), 86.00\% (34-layer ResNet), and 89.40\% (50-layer ResNet). 
+Thus, the ensemble performs comparably to the strongest individual backbone but does not surpass 50-layer ResNet in overall accuracy.
+Per-class analysis reveals that the ensemble matches or improves upon individual models in several categories (e.g., soup\_bowl at 100.0\%) while remaining close to the best single-model performance in others.
+Oracle accuracy reaches 93.60\%, indicating additional potential gains if expert selection were optimal. 
+The gap between ensemble and oracle accuracy amounts to 4.4 percentage points.
+The Expected Calibration Error (ECE) is 0.1458. 
+The average disagreement between ensemble members is 0.0187, corresponding to an agreement ratio of 93.6\%.

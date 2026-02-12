@@ -1,0 +1,15 @@
+\begin{abstract}
+ Robustness under distribution shift remains a central challenge in computer vision.
+ While ensemble methods are widely used to improve generalization, their effectiveness depends on both model diversity and aggregation strategy.
+ In this work, we compare homogeneous and heterogeneous ensembles under synthetic and real-world distribution shifts, and evaluate whether adaptive expert selection with a mixture-of-experts routing mechanism can better exploit model diversity
+
+ We construct a homogeneous CNN ensemble and a heterogeneous ensemble combining convolutional networks with a Vision Transformer.
+ Performance is evaluated on clean data, synthetic corruption benchmarks, and a student-collected out-of-distribution dataset.
+ Oracle analysis is used to quantify the potential benefit of complementary expertise.
+
+ Results show that homogeneous ensembles provide limited robustness gains due to correlated failures under shift.
+ In contrast, heterogeneous ensembles exhibit larger oracle gaps and improved robustness in severe corruption regimes.
+ However, a learned mixture-of-experts router primarily collapses to a dominant expert, yielding only modest improvements over uniform averaging.
+ These findings indicate that ensemble robustness is constrained both by expert diversity and by the ability of routing mechanisms to effectively leverage that diversity.
+\end{abstract}
+

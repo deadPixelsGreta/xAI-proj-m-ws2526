@@ -1,0 +1,139 @@
+\documentclass[a4paper]{article}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2022
+
+
+% ready for submission
+%\usepackage{ofu_xai_2022}
+
+\input{math_commands.tex}
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+%     \usepackage[preprint]{ofu_xai_2022}
+
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+\usepackage[final, nonatbib]{ofu_xai_2022}
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{ofu_xai_2022}
+
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage{bbm}
+\usepackage{graphicx}       % added by myself beause, it was missing
+% \usepackage{siunitx}        % bused for automatic bold font for highest values and better orientation and alignment in tables
+% \sisetup{
+%     detect-weight=true,
+%     detect-inline-weight=math,
+%     table-number-alignment=right,
+%     table-format=3.1
+% }
+\usepackage{tabularx}
+\usepackage{array}
+
+\newcolumntype{Y}{>{\raggedleft\arraybackslash}X}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+
+
+\usepackage[round]{natbib}
+%%%%
+
+\title{Ensemble Learning for Robust Image Classification under Distribution Shift}
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\author{%
+  Stephanus Park \\
+  Otto-Friedrich University of Bamberg\\
+  96049 Bamberg, Germany\\
+  \texttt{stephanus.park@stud.uni-bamberg.de} \\[0.5cm]
+  xAI-Proj-M: Domain Generalization for Robust Machine Learning \\
+  Degree: M.Sc. CitH \\
+  Matriculation \#: 2190297
+  % examples of more authors
+  \And
+  Sebastian Drefahl \\
+  Otto-Friedrich University of Bamberg\\
+  96049 Bamberg, Germany\\
+  \texttt{sebastian.drefahl@stud.uni-bamberg.de} \\[0.5cm]
+  xAI-Proj-M: Domain Generalization for Robust Machine Learning \\
+  Degree: M.Sc. CitH \\
+  Matriculation \#: 2173601
+}
+
+
+\begin{document}
+
+
+\maketitle
+\def\va{{\bm{a}}}
+
+\input{xAI-StudentReportTemplate/includes/abstract}
+\input{xAI-StudentReportTemplate/includes/intro} %steph
+\input{xAI-StudentReportTemplate/includes/background} %seb
+\input{xAI-StudentReportTemplate/includes/methods} %steph(hetero, router), seb (homo)
+\input{xAI-StudentReportTemplate/includes/setup} %steph, seb
+\input{xAI-StudentReportTemplate/includes/results} %steph seb
+\input{xAI-StudentReportTemplate/includes/discussion} %steph (discussion, limitations) seb (conclusion)
+\input{xAI-StudentReportTemplate/work_distribution}
+
+\newpage
+\bibliography{bibliography}
+\bibliographystyle{abbrvnat}
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Declaration of Authorship
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+{\parindent 0cm
+%%%%%%%%%%%%%%%%%%%%%%%%%%German%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Declaration of Authorship}
+Ich erkläre hiermit gemäß § 9 Abs. 12 APO, dass ich die vorstehende Seminararbeit selbstständig verfasst und keine anderen als die angegebenen Quellen und Hilfsmittel benutzt habe. Des Weiteren erkläre ich, dass die digitale Fassung der gedruckten Ausfertigung der Seminararbeit ausnahmslos in Inhalt und Wortlaut entspricht und zur Kenntnis genommen wurde, dass diese digitale Fassung einer durch Software unterstützten, anonymisierten Prüfung auf Plagiate unterzogen werden kann.\\
+\vspace{2\baselineskip}
+  
+Bamberg, \today
+
+\rule[0.5em]{14em}{0.5pt} \hspace{0.25\linewidth}\rule[0.5em]{14em}{0.5pt}
+\vspace{1em}
+\hspace{4em} (Ort, Datum) \hspace{0.51\linewidth} (Unterschrift)
+}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+\newpage
+
+\appendix
+\input{xAI-StudentReportTemplate/includes/appendix}
+
+
+\end{document}

@@ -1,0 +1,12 @@
+
+Performance of the \textbf{heterogeneous ensemble} on the phone-captured dataset (see Table~\ref{tab:hetero_phone}) exhibits a substantial drop relative to clean validation results, reflecting the severity of real-world distribution shift.
+Introducing architectural diversity improves realized ensemble accuracy compared to homogeneous CNN aggregation.
+More importantly, oracle accuracy increases to 72.49\%, substantially exceeding realized ensemble performance.
+The magnitude of this oracle gap is notably larger than on clean data.
+This indicates that under real-world shift, different experts succeed on different subsets of the data.
+In other words, complementary expertise becomes more pronounced as the distribution diverges from training conditions.
+Despite this increased diversity, uniform averaging fails to recover oracle performance.
+The ensemble remains significantly below its theoretical upper bound.
+This suggests that the heterogeneous ensemble is not capacity-limited, but limited by its aggregation strategy at inference time.
+
+The presence of substantial unrealized oracle potential motivates the introduction of an adaptive routing mechanism, which aims to exploit input-dependent specialization among experts.

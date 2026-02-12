@@ -1,0 +1,36 @@
+\subsection{Heterogeneous Ensemble}
+
+To test the effect of architectural diversity, we construct a heterogeneous ensemble from four backbones with distinct biases, all fine-tuned on the same ImageNet-subset training data.
+
+These backbones are summarized in Table~\ref{tab:hetero-ensemble}.
+They were specifically chosen to maximize inductive bias diversity: the CNNs provide complementary local feature extraction (texture, details, scaling), while the Vision Transformer (ViT) adds global reasoning.
+Identical training ensures differences arise from architecture alone.
+
+\begin{table}[!htbp]
+  \caption{Backbone architectures comprising the heterogeneous ensemble. Each model is initialized with ImageNet-pretrained weights and fine-tuned on the same training data to isolate architectural inductive bias effects.}
+  \label{tab:hetero-ensemble}
+  \centering
+  \begin{tabularx}{\linewidth}{
+    l
+    >{\hsize=1.2\hsize}L
+    >{\hsize=0.8\hsize}L
+    }
+    
+    \toprule
+    Backbone        & Key characteristics                           & Reference \\
+    \midrule
+    ResNet-34       & strong local texture bias, stable baseline    & \cite{He_2016_CVPR} \\
+    DenseNet-121    & Dense connectivity for feature reuse          & \cite{Huang_2017_CVPR} \\
+    EfficientNet-B0 & Parameter-efficient, balanced scaling         & \cite{pmlr-v97-tan19a} \\
+    ViT-B/16        & Global self-attention, shape-focused          & \cite{dosovitskiyImageWorth16x162020} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Predictions are aggregated via simple averaging:
+\[
+\hat{y} = \frac{1}{K} \sum_{k=1}^{K} p_k(\mathbf{x})
+\]
+where $p_k(\mathbf{x})$ is the softmax output of expert $k$, and $K=4$. This uniform weighting provides a baseline before introducing learned routing in Section ~\ref{sec:moe}.
+
+Prior work suggests that architectural diversity can induce complementary failure modes under distribution shift~\citep{wuExploringModelLearning2023}. We evaluate this hypothesis empirically.

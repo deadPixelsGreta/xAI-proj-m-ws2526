@@ -1,0 +1,21 @@
+\subsection{Datasets}
+
+Experiments are conducted on a 10-class object classification task provided within the xAI-Proj-M framework. 
+Standard evaluation is applied on the clean set, while robustness is evaluated under two types of distribution shifts.
+
+\paragraph{Clean Dataset.}
+The clean training set consists of 12.500 images, split to 1.250 images per class.
+A separate clean validation set is used for model selection and router training, consisting of 500 images (50 per class).
+All models are trained exclusively on the clean training split.
+
+\paragraph{Synthetic Corruptions.}
+The synthetic corruption benchmark consists of 500 images per corruption type (Gaussian noise and pixelation), evaluated across five severity levels.
+The dataset covers the same 10 object classes as the clean validation set.
+These perturbations modify low-level image statistics while preserving semantic content.
+
+\paragraph{Real-World OOD Dataset.}
+We evaluate models on a student-collected dataset containing approximately 300 images per student (30 per class), captured in outdoor or atypical environments using different devices.
+This dataset introduces shifts in background, lighting, viewpoint, and acquisition conditions.
+
+All splits are strictly separated.
+No target-domain adaptation or corruption data is used during training.

@@ -1,0 +1,21 @@
+\section{Introduction}
+\label{intro}
+
+Deep learning models for image classification are usually developed under the assumption that training and test data follow the same distribution, yet real deployments routinely violate this condition.
+Changes in acquisition device, environment, or image quality induce distribution shifts that degrade performance, even for models that achieve high in-distribution accuracy \citep{quinonero-candelaDatasetShiftMachine2008}.
+This gap between benchmark performance and real-world reliability is a core challenge in domain generalization and out-of-distribution (OOD) robustness.
+
+Improving clean accuracy alone does not guarantee robustness under domain shift, and modern vision models can fail abruptly on corrupted or unseen inputs while remaining highly confident in their predictions \citep{zhouDomainGeneralizationSurvey2023}.
+Such overconfident failures limit the applicability of deep models in safety- or reliability-critical applications and motivate methods that explicitly target robustness and calibration rather than only in-distribution accuracy.
+
+Ensemble learning offers a practical way to improve robustness by combining models that fail in different ways under distribution shift \citep{dietterichEnsembleMethodsMachine2000}.
+Heterogeneous ensembles that mix architectures tend to respond differently to the same domain shift than ensembles consisting of multiple instances of the same backbone \citep{petrakovaHeterogeneousHomogeneousMachine2015}.
+By aggregating predictions from such diverse experts, ensembles can achieve better robustness than single models or homogeneous ensembles \citep{wuExploringModelLearning2023}.
+
+Beyond static ensembling, mixture-of-experts (MoE) models introduce a routing mechanism that assigns inputs to experts in an input-dependent way \citep{masoudniaMixtureExpertsLiterature2014}.
+Rather than averaging all experts uniformly, a learned router can upweight experts that are better suited to a given input, potentially exploiting architectural diversity more efficiently under distribution shift.
+Yet it remains unclear whether routers trained on realistic data naturally specialize experts or instead collapse to using a single dominant model, leaving potential robustness gains untapped \citep{fedusSwitchTransformersScaling2021}.
+
+In this work, we empirically study ensemble robustness under distribution shift with a focus on architectural diversity and expert routing.
+Concretely, we compare homogeneous ensembles of ResNet models with heterogeneous ensembles that combine multiple CNN backbones and a ViT, and we evaluate these ensembles on a subset of the ImageNet dataset under synthetic corruptions and on a custom phone-captured test set to quantify robustness under realistic distribution shifts.
+Our main contributions are: (1) a controlled comparison of homogeneous and heterogeneous ensembles under synthetic and real-world distribution shifts; (2) evidence that architectural heterogeneity improves robustness under domain shift, even when gains in clean accuracy are limited; and (3) an analysis of MoE routing behavior showing that, without explicit incentives for specialization, routing tends to over-rely on a single expert despite the presence of complementary models.

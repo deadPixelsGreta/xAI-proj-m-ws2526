@@ -1,0 +1,20 @@
+\subsection{Setup}
+The experiments were conducted using multiple computational setups. 
+Training was performed on several Windows-based workstations equipped with NVIDIA A4000 GPUs, using appropriately configured development environments managed with \texttt{conda}. 
+In addition, training runs were executed on Google Colab Pro, utilizing NVIDIA A100 and T4 GPUs. 
+To ensure availability and persistence of data, results, and trained models, a pipeline integrating GitHub and Google Drive was established. 
+For each training run, the two best-performing models as well as the final trained model were stored on Google Drive. 
+Experiments were organized using Git branches, and the corresponding notebooks were retrieved from GitHub, modified when necessary, and versioned accordingly.
+
+All training runs and evaluations were logged using the online experiment tracking service \textit{Weights \& Biases (WB)}%
+\footnote{Weights \& Biases. (n.d.). \emph{Weights \& Biases: Machine learning experiment tracking}. https://wandb.ai/site (accessed February 10, 2026).}. 
+The platform enabled rapid inspection of intermediate results and provided aggregated metrics to support further optimization.
+
+We implemented several training setups. 
+Initially, the goal was to train two models from the residual nets, namely 18-layer and 50-layer ResNet. 
+These models served as an initial baseline architectures for subsequent development and comparison. 
+During training, hyperparameter sweeps were conducted to identify the optimal learning rate and the corresponding batch size. 
+The primary focus was on achieving a high \textit{validation accuracy}. 
+The resulting models were retained and reused in later stages of the project.
+
+At this stage, the main objective was to become familiar with the training setup and to establish a functional workflow covering data transfer, model training with validation, and systematic evaluation of results.

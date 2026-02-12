@@ -1,0 +1,36 @@
+\subsection{Training Protocol}
+
+All backbone models are initialized with ImageNet-pretrained weights and fine-tuned on the clean training set.
+Optimization uses stochastic gradient descent (SGD) with momentum 0.9 and weight decay $10^{-4}$.
+% The learning rate and batch size are selected via a small Bayesian search.
+Training runs for up to 30 epochs with early stopping based on best validation accuracy (patience = 5 epochs).
+Backbone-specific hyperparameter optimization is described in the respective subsections.
+
+For the \textbf{homogeneous ensemble}, a two-stage optimization strategy is employed.
+
+In Phase 1, each Resnet is trained independently.
+Learning rate is optimized via Bayesian optimization over a log-uniform range $[10^{-5}, 10^{-1}]$, while batch size is selected from predefined candidate values. 
+Early termination is implemented using Hyperband. 
+All runs use cosine learning rate scheduling, weight decay $10^{-4}$, label smoothing (0.1), and a fixed random seed (42).
+
+In Phase 2, the learning rate search range is narrowed around the best configuration identified in Phase 1, and batch size candidates are restricted to the two best-performing values. 
+Bayesian optimization with Hyperband early stopping is again employed.
+
+The final homogeneous ensemble consists of the best-performing 18-layer, 34-layer and 50-layer ResNet models obtained after Phase 2.
+For a given input $x$, each model produces a class probability distribution $p_m(y \mid x)$ via softmax. 
+The ensemble prediction is computed through uniform probability averaging,
+\[
+p_{\text{ens}}(y \mid x) = \frac{1}{M} \sum_{m=1}^{M} p_m(y \mid x),
+\]
+where $M=3$ denotes the number of ensemble members. 
+The final prediction corresponds to $\arg\max_y p_{\text{ens}}(y \mid x)$. 
+No weighting or routing mechanism is applied in this setup in order to isolate the effect of architectural depth and augmentation-induced diversity.
+
+For the \textbf{heterogeneous ensemble} a single, identical data augmentation pipeline is applied to all backbones to ensure fair comparison.
+Augmentations include RandomResizedCrop, horizontal flipping, and ColorJitter.
+Keeping the augmentation strategy fixed helps isolate architectural inductive bias as the primary source of diversity in the heterogeneous ensemble.
+
+For the mixture-of-experts setup, backbone weights are frozen.
+The routing network is trained using cross-entropy on an 80/20 split of validation data to prevent evaluation leakage.
+No corruption or phone-captured data is used during training.
+

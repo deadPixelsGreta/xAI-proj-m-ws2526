@@ -1,0 +1,18 @@
+\subsection{Mixture-of-Experts Router}
+\label{sec:moe}
+
+To adaptively exploit architectural diversity, we extend the heterogeneous ensemble with a mixture-of-experts (MoE) router~\citep{masoudniaMixtureExpertsLiterature2014}.
+Rather than uniformly averaging predictions, the router produces input-dependent weights over experts.
+
+The routing network is a lightweight two-layer MLP that takes penultimate-layer feature representations from the ViT-B/16 backbone as input and outputs a probability distribution over experts via softmax.
+ViT features are used as routing input due to their global, content-aware representations, which are well-suited for identifying image characteristics associated with different failure modes.
+
+Given gating weights $\mathbf{g} \in \Delta^3$, the final prediction is computed as
+\[
+\hat{y} = \sum_k g_k p_k (\mathbf{x}).
+\]
+
+The router is trained using cross-entropy loss on an 80/20 split of validation set, while all expert backbones remain frozen.
+Strong regularization, including heavy dropout, is applied to reduce the risk of expert collapse, as observed in large-scale MoE systems~\citep{fedusSwitchTransformersScaling2021}.
+
+This setup allows us to directly study whether expert diversity alone is sufficient for effective routing, or whether additional incentives for specialization are required.

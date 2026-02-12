@@ -1,0 +1,38 @@
+\subsection{Mixture-of-Experts Routing}
+
+We evaluate whether adaptive expert weighting can reduce the oracle gap observed on the phone-captured dataset.
+Figure~\ref{fig:moe_improve} compares three configurations: (i) uniform averaging of the heterogeneous ensemble, (ii) the strongest single backbone (ViT-B/16), and (iii) the learned mixture-of-experts (MoE) router.
+
+Uniform averaging treats all experts equally, regardless of input characteristics.
+Under real-world shift, this strategy underperforms the strongest single model, indicating that naive aggregation does not fully exploit architectural diversity.
+Replacing uniform averaging with a learned routing mechanism improves accuracy by approximately 2.4 percentage points relative to simple averaging.
+This gain is achieved without increasing model capacity or retraining the backbone networks.
+The improvement therefore reflects more effective utilization of existing expert diversity.
+
+Despite this improvement, routed performance remains substantially below oracle accuracy.
+A significant portion of the ensemble's theoretical upper bound remains unrealized.
+
+\paragraph{Routing Behavior Analysis.}
+To understand how the router achieves its improvement, we analyze the distribution of learned gating weights.
+Rather than producing a balanced mixture of experts, the router assigns dominant probability mass to a single expert (see Figure~\ref{fig:moe_weights}).
+Approximately 85\% of the routing weight is allocated to the ViT backbone, with the remaining CNN experts contributing minimally.
+This behavior indicates that the routing mechanism does not learn fine-grained, input-dependent specialization across experts.
+As shown in Figure~\ref{fig:moe_missed}, 60.1\% of samples are classified correctly by the chosen expert.
+Missed oracle cases account for 12.4\% of samples, representing the only region where improved routing could increase performance without modifying the ensemble.
+In contrast, 27.5\% of samples correspond to hard failures, where no expert predicts correctly.
+
+\paragraph{Class-level Routing Errors.}
+Furthermore, we examine missed oracle cases in which the router selects the ViT backbone despite another expert predicting correctly.
+Figure~\ref{fig:vit_fails} shows that these missed opportunities are not uniformly distributed across classes.
+They are concentrated in specific categories, including \textit{mouse}, \textit{notebook}, and \textit{teapot}.
+This class-dependent pattern indicates that routing errors are structured rather than randomly distributed across the label space.
+
+\paragraph{ViT Failure Analysis.}
+To analyze routing blind spots, we compare image characteristics between samples where the ViT backbone predicts correctly and samples where it fails.
+Figure~\ref{fig:vit_bubble} shows that ViT failure cases exhibit systematically higher blur levels.
+On average, failure images are approximately 32\% blurrier than successful predictions.
+Failure cases also exhibit lower contrast.
+Importantly, many of these blurry samples are correctly classified by CNN-based experts.
+For example, DenseNet-121 and EfficientNet-B0 jointly recover a substantial fraction of ViT failures on the \textit{mouse} class.
+These observations indicate that routing errors are not caused by a lack of alternative experts.
+Instead, viable CNN predictions exist in regimes where the ViT backbone degrades under reduced image quality.

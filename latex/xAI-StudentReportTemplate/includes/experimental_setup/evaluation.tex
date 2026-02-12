@@ -1,0 +1,29 @@
+\subsection{Evaluation Metrics}
+
+We evaluate all models using classification accuracy, calibration metrics, and oracle analysis.
+While standard accuracy measures realized performance, oracle accuracy quantifies the theoretical upper bound achievable by the ensemble.
+
+\paragraph{Accuracy.}
+We report overall classification accuracy on clean validation data, synthetic corruption benchmarks, and the phone-captured OOD dataset.
+For corruption experiments, performance is analyzed across severity levels to assess degradation under increasing shift.
+
+\paragraph{Expected Calibration Error (ECE).} 
+Calibration quality is measured using ECE \citep{pmlr-v70-guo17a} computed on the ensemble's final prediction.
+For each sample, expert probabilities are first combined (via uniform averaging or routing weights), and the maximum predicted probability of the aggregated distribution is taken as the ensemble confidence.
+Predictions are grouped into 15 equally spaced confidence bins, and ECE is computed as the weighted average of the absolute difference between mean confidence and empirical accuracy within each bin.
+Lower ECE indicates better alignment between predicted probabilities and observed correctness.
+
+\paragraph{Oracle Accuracy.}
+To assess the potential benefit of expert diversity, we compute oracle accuracy.
+For each input sample, the oracle selects the expert that predicts the correct class if at least one expert is correct.
+Formally, oracle accuracy is defined as:
+\[
+\text{Oracle} = \frac{1}{N} \sum_{i=1}^{N} \mathbbm{1} \Bigl( \exists k \; \text{s.t.} \; \hat{y}_k(\mathbf{x}_i) = y_i \Bigr),
+\]
+where $\hat{y}_k(\mathbf{x}_i)$ denotes the predicted class of expert $k$ for sample $\mathbf{x}_i$.
+
+Oracle accuracy therefore represents the maximum achievable performance under perfect expert selection.
+The gap between ensemble accuracy and oracle accuracy reflects the extent of complementary expertise within the ensemble.
+A small gap indicates correlated errors, whereas a large gap suggests substantial specialization potential.
+
+In our analysis (see Section~\ref{results}), oracle accuracy is used to quantify whether architectural heterogeneity creates exploitable diversity and whether the mixture-of-experts router successfully approaches this theoretical upper bound.

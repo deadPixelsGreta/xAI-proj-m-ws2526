@@ -1,0 +1,16 @@
+\subsection{Limitations}
+Several limitations contextualize our findings.
+
+First, backbone representations are not adapted to target domains.
+All experts are trained exclusively on the clean in-domain dataset.
+Consequently, observed robustness gains arise purely from aggregation strategies rather than improved feature learning.
+It remains unclear whether joint adaptation or domain-aware representation learning would reduce the proportion of hard failures observed under real-world shift.
+
+Second, the routing network is trained on a relatively small validation split.
+The limited training data may constrain the router’s ability to learn fine-grained specialization and likely contributes to the observed concentration of routing weights on a single dominant expert.
+A larger or more diverse routing dataset may enable more conditional coordination across experts.
+
+Third, the synthetic corruption benchmark (Gaussian noise and pixelation) captures low-level distribution shifts but does not model semantic or contextual variation.
+Real-world domain shift often involves changes in background, object context, and acquisition conditions that extend beyond pixel-level distortions.
+
+Taken together, these limitations indicate that both representation quality and expert diversity jointly constrain ensemble robustness under domain shift.

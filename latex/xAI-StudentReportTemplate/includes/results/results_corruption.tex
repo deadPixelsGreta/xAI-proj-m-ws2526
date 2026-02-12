@@ -1,0 +1,23 @@
+% Under synthetic corruptions, homogeneous performance decreases consistently with increasing severity. 
+% For Gaussian noise, accuracy drops from roughly 83\% at severity level 1 to about 35\% at level 5. 
+% The strongest decline occurs between the intermediate and higher severity levels. 
+% For pixelation, the degradation is more gradual. 
+% Accuracy decreases from approximately 87\% at severity level 1 to around 65\% at severity level 5. 
+% Across all severity levels, pixelation leads to a less pronounced performance drop compared to Gaussian noise.
+
+Figures~\ref{fig:appendix_gaussian} and~\ref{fig:appendix_pixelate} show accuracy as corruption severity increases for Gaussian noise and pixelation.
+
+At low corruption levels, both ensembles and the strongest single models perform similarly. 
+Differences are small and remain within a narrow range. 
+
+As severity increases, performance begins to diverge. 
+Under Gaussian noise, the homogeneous ResNet ensemble follows the degradation pattern of the single ResNet-50 and exhibits a pronounced drop at higher severity levels. 
+In contrast, the heterogeneous ensemble shows a flatter decline and maintains higher accuracy under severe corruption. 
+The difference becomes most visible at severity levels 4 and 5.
+
+A similar pattern is observed for pixelation. 
+At low levels, both ensembles behave comparably. 
+With increasing distortion, however, the homogeneous ensemble degrades more strongly, while the heterogeneous ensemble remains more stable. 
+
+Across both corruption types, the main signal lies in the slope of degradation rather than in absolute accuracy at low severity. 
+Architectural diversity reduces sensitivity to increasing corruption strength, whereas homogeneous ResNet models tend to fail in a more correlated manner under severe shift.

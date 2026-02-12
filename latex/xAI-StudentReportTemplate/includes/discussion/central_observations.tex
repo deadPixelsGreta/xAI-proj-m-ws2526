@@ -1,0 +1,23 @@
+\subsection{Central Observations}
+Our findings highlight three central observations regarding ensemble robustness under distribution shift.
+
+First, ensemble improvements depend on diversity among individual model errors \citep{dietterichEnsembleMethodsMachine2000}.
+Uniform averaging provides limited gains when model errors are highly correlated.
+The oracle analysis demonstrates that robustness benefits depend on the presence of disagreement under shift.
+When experts succeed on different subsets of samples, ensemble potential increases; when they fail together, aggregation offers little advantage.
+
+Second, architectural diversity is a primary driver of such complementary failure modes.
+Under real-world shift, heterogeneous ensembles exhibit larger oracle gaps than homogeneous CNN ensembles.
+This suggests that distinct inductive biases degrade differently under distribution changes.
+As a result, heterogeneous ensembles maintain robustness in regimes where homogeneous ensembles experience correlated collapse.
+
+Third, our mixture-of-experts experiments reveal a limitation of naive routing strategies.
+Although routing improves performance relative to uniform averaging, the learned gating mechanism concentrates the majority of its weight on a single dominant expert.
+The breakdown of routing decisions shows that only a limited fraction of errors correspond to oracle cases, while a substantial portion arises from hard failures where no expert is correct.
+
+Taken together, these results suggest that architectural diversity alone is insufficient to guarantee effective specialization.
+In the absence of explicit incentives, routing mechanisms tend to prioritize globally strong experts rather than conditionally coordinating complementary ones.
+Consequently, ensemble robustness under domain shift is constrained both by the diversity of available experts and by the ability of the aggregating mechanisms to exploit that diversity.
+
+Future work may investigate routing objectives that explicitly encourage expert specialization or incorporate input-level uncertainty cues.
+Alternatively, increasing expert diversity through data-centric or representation-level strategies may reduce the proportion of hard failures observed under real-world shift.

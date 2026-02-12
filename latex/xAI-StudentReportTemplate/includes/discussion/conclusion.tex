@@ -1,0 +1,9 @@
+\subsection{Conclusion}
+This work examined ensemble robustness under distribution shift and provides three central insights.
+First, robustness gains are not a function of model count but of failure diversity. Ensembles improve only when experts make complementary errors rather than correlated ones.
+
+Second, architectural heterogeneity primarily benefits robustness under shift, not clean accuracy. Distinct inductive biases degrade differently, creating complementary behavior that can be exploited under corruption and real-world variation.
+
+Third, routing mechanisms do not automatically induce specialization. In our setting, the mixture-of-experts model behaves largely as expert selection rather than coordinated collaboration. Without explicit incentives, gating mechanisms favor globally strong experts instead of conditionally combining complementary ones.
+
+Together, these findings suggest that ensemble robustness emerges less from stronger individual models and more from structured diversity and effective aggregation. Designing ensembles for robustness therefore requires intentional diversity engineering and routing objectives that promote specialization rather than dominance.

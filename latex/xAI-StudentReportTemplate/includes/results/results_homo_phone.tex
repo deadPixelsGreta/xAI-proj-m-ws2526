@@ -1,0 +1,6 @@
+On the OOD dataset, shown in Table~\ref{tab:homo_phone}, the \textbf{homogeneous ensemble} achieves an overall accuracy of 55.8\%, compared to 51.1\% (18-layer ResNet), 51.6\% (34-layer ResNet), and 56.3\% (50-layer ResNet). 
+As on the clean validation set, the ensemble performs comparably to the strongest single backbone but does not exceed 50-layer ResNet in overall accuracy.
+Per-class performance varies substantially across categories, with the ensemble achieving its highest accuracy on \textit{wooden\_spoon} (81.2\%) and lowest on \textit{soup\_bowl} (34.3\%).
+Oracle accuracy reaches 66.75\%, resulting in a gap of 10.95 percentage points between ensemble and oracle performance. 
+The Expected Calibration Error (ECE) is 0.0502.
+The average disagreement between ensemble members increases to 0.0289, corresponding to an agreement ratio of 78.7\%.
