@@ -1,29 +1,30 @@
 \subsection{Homogeneous Ensemble}
 \label{meth:homo}
-Der Aufbau eines Ensembles aus mehreren ResNet-Varianten ist ein methodisch sinnvoller Ansatz. 
-ResNets mit unterschiedlicher Tiefe, wie das 18-layer, 34-layer und 50-layer ResNet, unterscheiden sich in ihrer Modellkapazität, in der Tiefe ihrer Repräsentationen sowie in ihrem Optimierungsverhalten. 
-Obwohl alle Modelle auf derselben Grundarchitektur basieren, zeigen \citet{He_2016_CVPR}, dass innerhalb der ResNet-Familie eine relevante Diversität vorhanden ist.
 
-Diese Diversität ergibt sich aus der unterschiedlichen Anzahl an Residual-Blöcken. 
-Durch diese Blöcke werden hierarchische Verfeinerungen der Merkmalsrepräsentationen ermöglicht. 
-Tiefere Modelle, insbesondere das 50-layer ResNet, können dadurch komplexere und abstraktere Repräsentationen lernen. 
-Flachere Modelle wie das 18-layer ResNet lernen hingegen andere Aktivierungsmuster und sind stärker durch lokalere Transformationen geprägt. 
-In der Folge besitzen die Modelle unterschiedliche induktive Biases und gewichten verschiedene Aspekte derselben Eingabe unterschiedlich.
+Constructing an ensemble from multiple ResNet variants represents a methodologically sound approach. 
+ResNets of different depths, such as the 18-layer, 34-layer, and 50-layer ResNet, differ in model capacity, representational depth, and optimization behavior. 
+Although all models are based on the same architectural principle, \citet{He_2016_CVPR} demonstrate that meaningful diversity exists within the ResNet family.
 
-\citet{He_2016_CVPR} zeigen außerdem, dass ResNets unterschiedlicher Tiefe nicht nur unterschiedliche Genauigkeiten erreichen, sondern auch unterschiedliche Fehlercharakteristika aufweisen. 
-Diese Fehler treten nicht bei denselben Eingaben auf, sondern sind teilweise komplementär. 
-Für den Einsatz eines Ensembles ist dies entscheidend, da sich Fehlentscheidungen einzelner Modelle durch korrekte Vorhersagen anderer Modelle ausgleichen können. 
-Die hohe Leistungsfähigkeit der Einzelmodelle kann dadurch im Ensemble besser ausgenutzt werden als im Einsatz eines einzelnen tiefen Modells.
+This diversity arises from the differing number of residual blocks. 
+These blocks enable hierarchical refinement of feature representations. 
+Deeper models, particularly the 50-layer ResNet, can therefore learn more complex and abstract representations. 
+Shallower models such as the 18-layer ResNet, in contrast, learn different activation patterns and are more strongly characterized by localized transformations. 
+As a result, the models exhibit different inductive biases and weight different aspects of the same input differently.
 
-Da alle Modelle derselben Architekturklasse angehören, unter denselben Trainingsbedingungen und auf demselben Datensatz trainiert werden, bleibt das Ensemble homogen und gut interpretierbar. 
-Ein ResNet-Ensemble eignet sich daher besonders gut als Baseline, um Ensemble-Effekte, Modellvielfalt und Robustheit systematisch zu untersuchen.
+\citet{He_2016_CVPR} further show that ResNets of varying depth not only achieve different accuracy levels but also exhibit distinct error characteristics. 
+These errors do not occur on the same inputs but are partially complementary. 
+This is critical for ensemble usage, as incorrect predictions from individual models can be compensated by correct predictions from others. 
+The strong performance of individual models can therefore be leveraged more effectively within an ensemble than through the deployment of a single deep model.
 
-Zudem lässt sich ein ResNet-Ensemble gut mit einem einzelnen 50-layer ResNet vergleichen. 
-Da das 50-layer ResNet das leistungsstärkste Einzelmodell innerhalb des Ensembles darstellt, ermöglicht dieser Vergleich eine klare Einordnung des Ensemble-Effekts. 
-Leistungsgewinne des Ensembles lassen sich so direkt auf die Kombination mehrerer Modelle zurückführen und nicht allein auf eine erhöhte Modellkapazität. 
-Dadurch wird eine saubere Abgrenzung zwischen Verbesserungen durch Ensembling und solchen ermöglicht, die lediglich aus dem Einsatz eines starken Einzelmodells resultieren.
+Since all models belong to the same architectural class and are trained under identical conditions on the same dataset, the ensemble remains homogeneous and interpretable. 
+A ResNet ensemble is therefore particularly suitable as a baseline for systematically investigating ensemble effects, model diversity, and robustness.
 
-Aus Sicht des Ensemble Learnings ist die Kombination mehrerer Modelle mit unterschiedlichen induktiven Biases besonders geeignet, um Varianz zu reduzieren und die Robustheit zu erhöhen. 
-Flachere ResNet-Varianten tendieren dazu, stärker lokale und niedrigstufige visuelle Muster zu nutzen, während tiefere ResNets abstraktere und semantisch reichhaltigere Repräsentationen lernen. 
-Ein Ensemble aus ResNet-Modellen unterschiedlicher Tiefe ermöglicht es daher, kontrolliert Vorhersagediversität zu erzeugen, ohne die zugrunde liegende Architekturklasse zu verändern. 
-Dies macht ResNet-basierte Ensembles besonders geeignet als Ausgangsbasis für die Analyse von Robustheit und Fehlervielfalt unter Verteilungsverschiebungen.
+Moreover, a ResNet ensemble can be directly compared to a single 50-layer ResNet. 
+Because the 50-layer ResNet represents the strongest individual model within the ensemble, this comparison enables a clear attribution of ensemble effects. 
+Performance gains achieved by the ensemble can thus be directly attributed to model combination rather than merely increased model capacity. 
+This allows for a clean separation between improvements due to ensembling and those resulting solely from the use of a strong individual model.
+
+From the perspective of ensemble learning, combining multiple models with different inductive biases is particularly well-suited for reducing variance and improving robustness. 
+Shallower ResNet variants tend to rely more heavily on local and low-level visual patterns, whereas deeper ResNets learn more abstract and semantically rich representations. 
+An ensemble of ResNet models with varying depths therefore enables controlled prediction diversity without altering the underlying architectural class. 
+This makes ResNet-based ensembles particularly suitable as a foundation for analyzing robustness and error diversity under distribution shift.
